@@ -1,30 +1,43 @@
 # trusted-time-kmp
 
-A **Kotlin Multiplatform SDK** that provides tamper-proof time across Android, iOS, JVM, and JS.
-Uses platform-native trusted time sources so users cannot spoof your app's clock by changing device settings.
+A **Kotlin Multiplatform** library that gives your app a clock users can't fake by changing the
+device time. It syncs once with a trusted network source, then keeps time locally, so `now()` is
+cheap and works offline.
+
+> ⚠️ **Work in progress — not production-ready yet.** Android uses Google's TrustedTime API and is
+> the most complete target. The JVM, iOS and JS targets still have known gaps (see
+> [Known limitations](#known-limitations)). Not yet published to Maven Central.
 
 ---
 
-## Platform Support
+## Platform support
 
-| Platform | Trusted Time Source                          |
-|----------|----------------------------------------------|
-| Android  | Google Play Services TrustedTime API         |
-| iOS      | Cloudflare HTTP time header + monotonic clock |
-| JVM      | NTP via Apache Commons Net (`pool.ntp.org`)   |
-| JS       | Cloudflare HTTP time header                   |
+| Platform | Trusted time source                           | Status                  |
+|----------|-----------------------------------------------|-------------------------|
+| Android  | Google Play Services TrustedTime API          | ✅ Compiles             |
+| JVM      | NTP via Apache Commons Net (`pool.ntp.org`)   | ⚠️ Compiles, see limits |
+| iOS      | HTTP `Date` header + device uptime            | 🚧 Not yet verified     |
+| JS       | HTTP `Date` header via `fetch`                | 🚧 Not yet verified     |
 
 ---
 
 ## Installation
 
-Add to your shared module's `build.gradle.kts`:
+Not on Maven Central yet. For now, clone this repo and depend on the module directly:
 
 ```kotlin
-implementation("io.github.jeremy-gitau:trusted-time-kmp:1.0.0")
+// settings.gradle.kts
+include(":trusted-time")
+
+// your module's build.gradle.kts
+implementation(project(":trusted-time"))
 ```
 
-> **Not yet published to Maven Central.** Until then, clone this repo and depend on the `:trusted-time` module directly.
+Once published, it will be:
+
+```kotlin
+implementation("io.github.jeremy-gitau:trusted-time-kmp:<version>")
+```
 
 ---
 
@@ -32,7 +45,8 @@ implementation("io.github.jeremy-gitau:trusted-time-kmp:1.0.0")
 
 ### 1. Initialize (Android only)
 
-In your `Application.onCreate()`:
+The Android implementation needs an application `Context`. Call this once in
+`Application.onCreate()`:
 
 ```kotlin
 class MyApp : Application() {
@@ -43,92 +57,129 @@ class MyApp : Application() {
 }
 ```
 
-### 2. Sync once at startup
+### 2. Create one clock and sync it
+
+Each `TrustedTimeClock` syncs independently, so create **one shared instance** (e.g. a singleton
+or via dependency injection) rather than one per screen.
 
 ```kotlin
 val clock = TrustedTimeClock()
 
-// Call once — ideally in a ViewModel or at app start
-viewModelScope.launch {
+// Suspends until the network sync finishes. Never throws — on failure
+// the clock keeps using the system time.
+scope.launch {
     clock.sync()
 }
 ```
 
-### 3. Use everywhere
+### 3. Read the time
 
 ```kotlin
-val now: Instant = clock.now()
-val isTrusted: Boolean = clock.isTimeSynced()
-val source: TimeSource = clock.timeSource() // TRUSTED or SYSTEM_FALLBACK
-```
+val now: Instant = clock.now()              // always returns a value
+val source: TimeSource = clock.timeSource() // source of the last now() call
+val synced: Boolean = clock.isTimeSynced()  // has a sync ever succeeded?
 
-### 4. Use as a `kotlinx.datetime` Clock
-
-```kotlin
-// TrustedTimeClock is a drop-in wherever Clock is expected
-fun doSomethingWithClock(clock: Clock) {
-    val now = clock.now()
+if (source == TimeSource.TRUSTED) {
+    // safe to use for licence checks, trial expiry, timestamps, etc.
 }
-
-doSomethingWithClock(clock)
 ```
+
+Before a successful sync, or when no trusted time is available, `now()` falls back to the device
+clock and `timeSource()` returns `SYSTEM_FALLBACK`. Always check the source before relying on the
+time for anything security-sensitive.
 
 ---
 
-## API Reference
+## API reference
 
 ```kotlin
-class TrustedTimeClock() : Clock {
-    fun now(): Instant           // Current time (trusted or fallback)
-    suspend fun sync()           // Perform network sync (call once at startup)
-    fun isTimeSynced(): Boolean  // Whether a successful sync has occurred
-    fun timeSource(): TimeSource // TRUSTED or SYSTEM_FALLBACK
+class TrustedTimeClock() {
+    fun now(): Instant            // Current time (trusted, or system fallback)
+    suspend fun sync()            // Network sync; call once at startup
+    fun isTimeSynced(): Boolean   // Whether a sync has succeeded
+    fun timeSource(): TimeSource  // Source used by the most recent now() call
 }
 
 enum class TimeSource {
-    TRUSTED,        // Time from NTP / trusted service
-    SYSTEM_FALLBACK // Device system clock (sync not yet done or failed)
+    TRUSTED,         // From the platform's trusted source
+    SYSTEM_FALLBACK  // Device clock (not synced, sync failed, or no trusted signal yet)
 }
 ```
 
+`Instant` is `kotlinx.datetime.Instant`.
+
 ---
 
-## Publishing to Maven Central
+## Known limitations
 
-1. Create a Sonatype account at https://central.sonatype.com
-2. Register your `io.github.<username>` namespace
-3. Generate a GPG key: `gpg --gen-key`
-4. Export your key: `gpg --export-secret-keys -o secring.gpg`
-5. Add credentials to `~/.gradle/gradle.properties`:
+These are tracked and will be fixed before a 1.0 release:
 
-```properties
-mavenCentralUsername=your_username
-mavenCentralPassword=your_password
-signing.keyId=LAST_8_CHARS
-signing.password=your_passphrase
-signing.secretKeyRingFile=/path/to/secring.gpg
+- **JVM:** time after sync is measured with the wall clock, so changing the system time after
+  syncing still changes `now()`.
+- **iOS:** elapsed time uses device uptime, which may pause while the device sleeps, so the clock
+  can fall behind.
+- **JS:** browsers hide the `Date` header on cross-origin requests, and `window` doesn't exist in
+  Node.js, so sync is likely to fail on both.
+- **iOS / JS:** the HTTP `Date` header only has 1-second precision and network delay isn't
+  compensated, so expect up to ~1 s of error. Fine for detecting a changed clock, not for precise
+  timing.
+- `TrustedTimeClock` does not implement `kotlinx.datetime.Clock` yet.
+- Not thread-safe yet; `timeSource()` reflects whichever `now()` call ran last on any thread.
+- The sample app does not build yet.
+
+---
+
+## Building
+
+The project uses the Gradle wrapper (Gradle 8.14.5) and JDK 17. You don't need Gradle installed.
+
+```bash
+./gradlew :trusted-time:compileKotlinJvm               # JVM
+./gradlew :trusted-time:compileDebugKotlinAndroid      # Android
+./gradlew :trusted-time:jvmTest                        # run tests on the JVM
 ```
 
-6. Update `trusted-time/build.gradle.kts` with your coordinates
-7. Run: `./gradlew :trusted-time:publishAllPublicationsToMavenCentralRepository`
+iOS targets require macOS with Xcode installed.
 
 ---
 
-## Project Structure
+## Project structure
 
 ```
 trusted-time-kmp/
-├── trusted-time/                        ← SDK library module
+├── trusted-time/              ← the library
 │   └── src/
-│       ├── commonMain/                  ← expect class + shared API
-│       ├── androidMain/                 ← Google TrustedTime actual
-│       ├── iosMain/                     ← Cloudflare HTTP + monotonic actual
-│       ├── jvmMain/                     ← Apache Commons NTP actual
-│       └── jsMain/                      ← Cloudflare fetch actual
-├── sample-app/                          ← Android demo app
-├── gradle/libs.versions.toml            ← Version catalog
-└── build.gradle.kts
+│       ├── commonMain/        ← shared API (expect class, TimeSource)
+│       ├── commonTest/        ← shared tests
+│       ├── androidMain/       ← Google TrustedTime implementation
+│       ├── jvmMain/           ← NTP implementation
+│       ├── iosMain/           ← HTTP Date header implementation
+│       └── jsMain/            ← fetch implementation
+├── sample-app/                ← Android demo app
+├── gradle/libs.versions.toml  ← dependency versions
+└── gradlew                    ← Gradle wrapper
 ```
+
+---
+
+## Publishing (maintainers)
+
+Publishing uses the [vanniktech maven-publish](https://github.com/vanniktech/gradle-maven-publish-plugin)
+plugin. Coordinates are set in `trusted-time/build.gradle.kts`.
+
+1. Verify the `io.github.jeremy-gitau` namespace at https://central.sonatype.com
+2. Create a GPG key (`gpg --gen-key`) and publish it to a key server
+3. Add credentials to your **local** `~/.gradle/gradle.properties` — never commit them:
+
+   ```properties
+   mavenCentralUsername=...
+   mavenCentralPassword=...
+   signing.keyId=...
+   signing.password=...
+   signing.secretKeyRingFile=/path/to/secring.gpg
+   ```
+
+4. Run `./gradlew :trusted-time:publishAllPublicationsToMavenCentralRepository`
 
 ---
 
