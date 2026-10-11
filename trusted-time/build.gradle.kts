@@ -35,7 +35,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(libs.kotlinx.datetime)
+            api(libs.kotlinx.datetime) // Instant is part of the public API
             implementation(libs.kotlinx.coroutines.core)
         }
 

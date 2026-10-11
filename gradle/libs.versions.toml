@@ -9,6 +9,8 @@ kotlinxCoroutines = "1.9.0"
 playServicesTime = "16.0.1"
 apacheCommonsNet = "3.11.1"
 vanniktechPublish = "0.29.0"
+appcompat = "1.7.0"
+lifecycle = "2.8.7"
 
 [libraries]
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
@@ -17,12 +19,15 @@ kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 # Android
 play-services-time = { group = "com.google.android.gms", name = "play-services-time", version.ref = "playServicesTime" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
 
 # JVM
 apache-commons-net = { group = "commons-net", name = "commons-net", version.ref = "apacheCommonsNet" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "androidGradlePlugin" }
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
 vanniktech-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktechPublish" }
