@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 class TrustedTimeClockTest {
 
     @Test
-    fun `now() returns an instant before sync - uses system fallback`() {
+    fun nowBeforeSyncUsesSystemFallback() {
         val clock = TrustedTimeClock()
         val now: Instant = clock.now()
         assertNotNull(now)
@@ -17,13 +17,21 @@ class TrustedTimeClockTest {
     }
 
     @Test
-    fun `isTimeSynced returns false before sync`() {
+    fun isTimeSyncedIsFalseBeforeSync() {
         val clock = TrustedTimeClock()
         assertTrue(!clock.isTimeSynced())
     }
 
     @Test
-    fun `now() returns a reasonable timestamp`() {
+    fun timeSourceDoesNotDependOnPriorNowCall() {
+        val clock = TrustedTimeClock()
+        assertTrue(clock.timeSource() == TimeSource.SYSTEM_FALLBACK)
+        clock.now()
+        assertTrue(clock.timeSource() == TimeSource.SYSTEM_FALLBACK)
+    }
+
+    @Test
+    fun nowReturnsReasonableTimestamp() {
         val clock = TrustedTimeClock()
         val now = clock.now()
         val systemNow = Clock.System.now()

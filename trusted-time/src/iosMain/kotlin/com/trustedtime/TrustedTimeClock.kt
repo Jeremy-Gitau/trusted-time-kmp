@@ -6,7 +6,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import platform.Foundation.*
-import platform.posix.*
+import platform.darwin.*
 
 /**
  * iOS actual — fetches time from NTP using NSURLSession HTTP time headers
@@ -18,17 +18,14 @@ actual class TrustedTimeClock actual constructor() {
     private var trustedInstant: Instant? = null
     private var syncedAt: Long = 0L         // local monotonic ms at sync time
     private var synced = false
-    private var source = TimeSource.SYSTEM_FALLBACK
 
     actual fun now(): Instant {
         val trusted = trustedInstant
         return if (trusted != null && synced) {
-            source = TimeSource.TRUSTED
             // Advance trusted snapshot by elapsed monotonic time
             val elapsedMs = currentMonotonicMs() - syncedAt
             Instant.fromEpochMilliseconds(trusted.toEpochMilliseconds() + elapsedMs)
         } else {
-            source = TimeSource.SYSTEM_FALLBACK
             Clock.System.now()
         }
     }
@@ -77,7 +74,8 @@ actual class TrustedTimeClock actual constructor() {
 
     actual fun isTimeSynced(): Boolean = synced
 
-    actual fun timeSource(): TimeSource = source
+    actual fun timeSource(): TimeSource =
+        if (trustedInstant != null && synced) TimeSource.TRUSTED else TimeSource.SYSTEM_FALLBACK
 
     private fun currentMonotonicMs(): Long =
         (NSProcessInfo.processInfo.systemUptime * 1000).toLong()
