@@ -4,6 +4,7 @@ import com.trustedtime.TrustedTimeClock
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Syncs with NTP, then prints trusted time next to the system clock once a
@@ -28,6 +29,6 @@ fun main() = runBlocking {
         val system = Clock.System.now()
         val diffMs = system.toEpochMilliseconds() - trusted.toEpochMilliseconds()
         println("trusted=$trusted  system=$system  system-trusted=${diffMs}ms")
-        delay(1_000)
+        delay(1_000.milliseconds)
     }
 }
