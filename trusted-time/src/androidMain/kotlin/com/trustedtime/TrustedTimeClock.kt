@@ -14,18 +14,17 @@ import kotlinx.datetime.Instant
  * Android actual — backed by Google Play Services TrustedTime API.
  */
 actual class TrustedTimeClock actual constructor() {
-
     private var client: TrustedTimeClient? = null
     private var synced = false
 
-    actual fun now(): Instant =
-        trustedMillis()?.let(Instant::fromEpochMilliseconds) ?: Clock.System.now()
+    actual fun now(): Instant = trustedMillis()?.let(Instant::fromEpochMilliseconds) ?: Clock.System.now()
 
     actual suspend fun sync() {
         withContext(Dispatchers.IO) {
             try {
-                val ctx = TrustedTimeInitializer.appContext
-                    ?: error("Call TrustedTimeInitializer.init(context) first")
+                val ctx =
+                    TrustedTimeInitializer.appContext
+                        ?: error("Call TrustedTimeInitializer.init(context) first")
                 val task = TrustedTime.createClient(ctx)
                 client = Tasks.await(task)
                 synced = true
@@ -37,12 +36,10 @@ actual class TrustedTimeClock actual constructor() {
 
     actual fun isTimeSynced(): Boolean = synced
 
-    actual fun timeSource(): TimeSource =
-        if (trustedMillis() != null) TimeSource.TRUSTED else TimeSource.SYSTEM_FALLBACK
+    actual fun timeSource(): TimeSource = if (trustedMillis() != null) TimeSource.TRUSTED else TimeSource.SYSTEM_FALLBACK
 
     // Null until Play Services has a trusted time signal (e.g. right after boot)
-    private fun trustedMillis(): Long? =
-        if (synced) client?.computeCurrentUnixEpochMillis() else null
+    private fun trustedMillis(): Long? = if (synced) client?.computeCurrentUnixEpochMillis() else null
 }
 
 /**

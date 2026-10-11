@@ -11,24 +11,25 @@ import kotlin.time.Duration.Companion.milliseconds
  * second for a minute. Change your computer's clock while it runs: the system time jumps,
  * the trusted time does not.
  */
-fun main() = runBlocking {
-    val clock = TrustedTimeClock()
+fun main() =
+    runBlocking {
+        val clock = TrustedTimeClock()
 
-    println("Before sync: ${clock.now()}  source=${clock.timeSource()}")
-    println("Syncing with NTP...")
-    clock.sync()
+        println("Before sync: ${clock.now()}  source=${clock.timeSource()}")
+        println("Syncing with NTP...")
+        clock.sync()
 
-    if (!clock.isTimeSynced()) {
-        println("⚠️ Sync failed — check your network. Using the system clock.")
-        return@runBlocking
+        if (!clock.isTimeSynced()) {
+            println("⚠️ Sync failed — check your network. Using the system clock.")
+            return@runBlocking
+        }
+        println("✅ Synced — source=${clock.timeSource()}\n")
+
+        repeat(60) {
+            val trusted = clock.now()
+            val system = Clock.System.now()
+            val diffMs = system.toEpochMilliseconds() - trusted.toEpochMilliseconds()
+            println("trusted=$trusted  system=$system  system-trusted=${diffMs}ms")
+            delay(1_000.milliseconds)
+        }
     }
-    println("✅ Synced — source=${clock.timeSource()}\n")
-
-    repeat(60) {
-        val trusted = clock.now()
-        val system = Clock.System.now()
-        val diffMs = system.toEpochMilliseconds() - trusted.toEpochMilliseconds()
-        println("trusted=$trusted  system=$system  system-trusted=${diffMs}ms")
-        delay(1_000.milliseconds)
-    }
-}

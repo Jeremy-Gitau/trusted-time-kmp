@@ -10,7 +10,6 @@ import com.trustedtime.TrustedTimeClock
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
-
     private val clock = TrustedTimeClock()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,11 +25,12 @@ class MainActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 statusText.text = "Syncing..."
                 clock.sync()
-                statusText.text = if (clock.isTimeSynced()) {
-                    "✅ Synced — source: ${clock.timeSource()}"
-                } else {
-                    "⚠️ Sync failed — using system clock"
-                }
+                statusText.text =
+                    if (clock.isTimeSynced()) {
+                        "✅ Synced — source: ${clock.timeSource()}"
+                    } else {
+                        "⚠️ Sync failed — using system clock"
+                    }
             }
         }
 

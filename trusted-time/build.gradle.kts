@@ -58,9 +58,15 @@ kotlin {
 
 android {
     namespace = "com.trustedtime"
-    compileSdk = libs.versions.androidCompileSdk.get().toInt()
+    compileSdk =
+        libs.versions.androidCompileSdk
+            .get()
+            .toInt()
     defaultConfig {
-        minSdk = libs.versions.androidMinSdk.get().toInt()
+        minSdk =
+            libs.versions.androidMinSdk
+                .get()
+                .toInt()
     }
 }
 
@@ -72,7 +78,7 @@ mavenPublishing {
     coordinates(
         groupId = "io.github.jeremy-gitau",
         artifactId = "trusted-time-kmp",
-        version = "1.0.0"
+        version = "1.0.0",
     )
 
     pom {

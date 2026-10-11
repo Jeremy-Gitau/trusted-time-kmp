@@ -11,7 +11,7 @@ package com.trustedtime
 data class TrustedTimeConfig(
     val ntpHost: String = "pool.ntp.org",
     val timeoutMs: Int = 5_000,
-    val autoSync: Boolean = false
+    val autoSync: Boolean = false,
 ) {
     companion object {
         val Default = TrustedTimeConfig()

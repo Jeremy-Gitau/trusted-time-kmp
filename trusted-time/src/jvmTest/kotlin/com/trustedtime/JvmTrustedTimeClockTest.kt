@@ -5,14 +5,14 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class JvmTrustedTimeClockTest {
-
     private var fakeMonotonicNanos = 0L
     private var fakeSystemTime = Instant.fromEpochMilliseconds(0)
 
-    private val clock = TrustedTimeClock(
-        monotonicNanos = { fakeMonotonicNanos },
-        systemNow = { fakeSystemTime },
-    )
+    private val clock =
+        TrustedTimeClock(
+            monotonicNanos = { fakeMonotonicNanos },
+            systemNow = { fakeSystemTime },
+        )
 
     @Test
     fun nowAdvancesWithMonotonicTimeAfterSync() {

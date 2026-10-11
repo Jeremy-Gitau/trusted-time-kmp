@@ -10,7 +10,6 @@ import kotlin.js.Date
  * server "Date" header as trusted time source. Works in both browser and Node.js.
  */
 actual class TrustedTimeClock actual constructor() {
-
     private var trustedMs: Double? = null
     private var syncedPerformanceMs: Double = 0.0
     private var synced = false
@@ -28,9 +27,10 @@ actual class TrustedTimeClock actual constructor() {
     actual suspend fun sync() {
         try {
             @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
-            val response = kotlinx.browser.window
-                .fetch("https://time.cloudflare.com", js("({ method: 'HEAD' })"))
-                .await()
+            val response =
+                kotlinx.browser.window
+                    .fetch("https://time.cloudflare.com", js("({ method: 'HEAD' })"))
+                    .await()
 
             val dateHeader = response.headers.get("Date")
             if (dateHeader != null) {
@@ -47,9 +47,9 @@ actual class TrustedTimeClock actual constructor() {
 
     actual fun isTimeSynced(): Boolean = synced
 
-    actual fun timeSource(): TimeSource =
-        if (trustedMs != null && synced) TimeSource.TRUSTED else TimeSource.SYSTEM_FALLBACK
+    actual fun timeSource(): TimeSource = if (trustedMs != null && synced) TimeSource.TRUSTED else TimeSource.SYSTEM_FALLBACK
 
     private fun currentPerformanceMs(): Double =
-        kotlinx.browser.window.performance.now()
+        kotlinx.browser.window.performance
+            .now()
 }

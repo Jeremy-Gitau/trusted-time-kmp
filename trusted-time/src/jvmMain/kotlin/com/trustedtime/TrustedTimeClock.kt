@@ -18,11 +18,11 @@ actual class TrustedTimeClock internal constructor(
     private val monotonicNanos: () -> Long,
     private val systemNow: () -> Instant,
 ) {
-
     actual constructor() : this(System::nanoTime, Clock.System::now)
 
     /** Trusted NTP time at the moment of sync */
     private var trustedEpochMs: Long = 0L
+
     /** [monotonicNanos] reading taken at the same moment as [trustedEpochMs] */
     private var monotonicAtSyncNanos: Long = 0L
     private var synced = false
@@ -30,22 +30,22 @@ actual class TrustedTimeClock internal constructor(
     private val ntpHost = TrustedTimeConfig.Default.ntpHost
     private val timeoutMs = TrustedTimeConfig.Default.timeoutMs
 
-    actual fun now(): Instant {
-        return if (synced) {
+    actual fun now(): Instant =
+        if (synced) {
             val elapsedMs = (monotonicNanos() - monotonicAtSyncNanos) / 1_000_000
             Instant.fromEpochMilliseconds(trustedEpochMs + elapsedMs)
         } else {
             systemNow()
         }
-    }
 
     actual suspend fun sync() {
         withContext(Dispatchers.IO) {
             try {
-                val client = NTPUDPClient().apply {
-                    defaultTimeout = timeoutMs
-                    open()
-                }
+                val client =
+                    NTPUDPClient().apply {
+                        defaultTimeout = timeoutMs
+                        open()
+                    }
                 val address = InetAddress.getByName(ntpHost)
                 val info = client.getTime(address)
                 client.close()
@@ -66,6 +66,5 @@ actual class TrustedTimeClock internal constructor(
 
     actual fun isTimeSynced(): Boolean = synced
 
-    actual fun timeSource(): TimeSource =
-        if (synced) TimeSource.TRUSTED else TimeSource.SYSTEM_FALLBACK
+    actual fun timeSource(): TimeSource = if (synced) TimeSource.TRUSTED else TimeSource.SYSTEM_FALLBACK
 }

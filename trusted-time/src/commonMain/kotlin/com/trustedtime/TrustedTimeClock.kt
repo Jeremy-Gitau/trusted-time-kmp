@@ -10,7 +10,7 @@ import kotlinx.datetime.Instant
  */
 enum class TimeSource {
     TRUSTED,
-    SYSTEM_FALLBACK
+    SYSTEM_FALLBACK,
 }
 
 /**
@@ -27,7 +27,6 @@ enum class TimeSource {
  * ```
  */
 expect class TrustedTimeClock() {
-
     /**
      * Returns the current [Instant].
      * Always returns a value — falls back to system clock if not yet synced.

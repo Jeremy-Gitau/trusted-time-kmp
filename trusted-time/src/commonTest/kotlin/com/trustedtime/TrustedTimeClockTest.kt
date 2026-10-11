@@ -7,7 +7,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class TrustedTimeClockTest {
-
     @Test
     fun nowBeforeSyncUsesSystemFallback() {
         val clock = TrustedTimeClock()
@@ -36,9 +35,10 @@ class TrustedTimeClockTest {
         val now = clock.now()
         val systemNow = Clock.System.now()
         // Should be within 1 minute of system time (even on fallback)
-        val diffMs = kotlin.math.abs(
-            now.toEpochMilliseconds() - systemNow.toEpochMilliseconds()
-        )
+        val diffMs =
+            kotlin.math.abs(
+                now.toEpochMilliseconds() - systemNow.toEpochMilliseconds(),
+            )
         assertTrue(diffMs < 60_000, "Clock drift too large: ${diffMs}ms")
     }
 }
