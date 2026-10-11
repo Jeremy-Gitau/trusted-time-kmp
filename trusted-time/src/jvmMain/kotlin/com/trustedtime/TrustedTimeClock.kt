@@ -9,13 +9,22 @@ import java.net.InetAddress
 
 /**
  * JVM actual — fetches time from an NTP server using Apache Commons Net.
- * Caches the offset between NTP time and system clock so subsequent
- * [now] calls are cheap (no network required).
+ *
+ * After sync, time is advanced with [System.nanoTime], a monotonic counter
+ * that is unaffected by changes to the system clock, so subsequent [now]
+ * calls are cheap (no network) and can't be spoofed by changing the clock.
  */
-actual class TrustedTimeClock actual constructor() {
+actual class TrustedTimeClock internal constructor(
+    private val monotonicNanos: () -> Long,
+    private val systemNow: () -> Instant,
+) {
 
-    /** Difference between trusted NTP time and System.currentTimeMillis() at sync time */
-    private var offsetMs: Long = 0L
+    actual constructor() : this(System::nanoTime, Clock.System::now)
+
+    /** Trusted NTP time at the moment of sync */
+    private var trustedEpochMs: Long = 0L
+    /** [monotonicNanos] reading taken at the same moment as [trustedEpochMs] */
+    private var monotonicAtSyncNanos: Long = 0L
     private var synced = false
 
     private val ntpHost = TrustedTimeConfig.Default.ntpHost
@@ -23,9 +32,10 @@ actual class TrustedTimeClock actual constructor() {
 
     actual fun now(): Instant {
         return if (synced) {
-            Instant.fromEpochMilliseconds(System.currentTimeMillis() + offsetMs)
+            val elapsedMs = (monotonicNanos() - monotonicAtSyncNanos) / 1_000_000
+            Instant.fromEpochMilliseconds(trustedEpochMs + elapsedMs)
         } else {
-            Clock.System.now()
+            systemNow()
         }
     }
 
@@ -40,13 +50,18 @@ actual class TrustedTimeClock actual constructor() {
                 val info = client.getTime(address)
                 client.close()
 
-                val ntpTimeMs = info.message.transmitTimeStamp.time
-                offsetMs = ntpTimeMs - System.currentTimeMillis()
-                synced = true
+                applySync(info.message.transmitTimeStamp.time)
             } catch (e: Exception) {
                 synced = false
             }
         }
+    }
+
+    /** Records [ntpTimeMs] as the trusted time at this instant. */
+    internal fun applySync(ntpTimeMs: Long) {
+        trustedEpochMs = ntpTimeMs
+        monotonicAtSyncNanos = monotonicNanos()
+        synced = true
     }
 
     actual fun isTimeSynced(): Boolean = synced

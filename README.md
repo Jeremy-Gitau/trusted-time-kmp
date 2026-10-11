@@ -5,7 +5,7 @@ device time. It syncs once with a trusted network source, then keeps time locall
 cheap and works offline.
 
 > ⚠️ **Work in progress — not production-ready yet.** Android uses Google's TrustedTime API and is
-> the most complete target. The JVM, iOS and JS targets still have known gaps (see
+> the most complete target. The iOS and JS targets still have known gaps (see
 > [Known limitations](#known-limitations)). Not yet published to Maven Central.
 
 ---
@@ -15,7 +15,7 @@ cheap and works offline.
 | Platform | Trusted time source                           | Status                  |
 |----------|-----------------------------------------------|-------------------------|
 | Android  | Google Play Services TrustedTime API          | ✅ Tested on a device   |
-| JVM      | NTP via Apache Commons Net (`pool.ntp.org`)   | ⚠️ Builds, see limits   |
+| JVM      | NTP via Apache Commons Net (`pool.ntp.org`)   | ✅ Builds, unit tested  |
 | iOS      | HTTP `Date` header + device uptime            | 🚧 Builds, sync untested |
 | JS       | HTTP `Date` header via `fetch`                | 🚧 Builds, sync untested |
 
@@ -114,8 +114,6 @@ enum class TimeSource {
 
 These are tracked and will be fixed before a 1.0 release:
 
-- **JVM:** time after sync is measured with the wall clock, so changing the system time after
-  syncing still changes `now()`.
 - **iOS:** elapsed time uses device uptime, which may pause while the device sleeps, so the clock
   can fall behind.
 - **JS:** browsers hide the `Date` header on cross-origin requests, and `window` doesn't exist in
