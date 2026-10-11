@@ -28,6 +28,7 @@ apache-commons-net = { group = "commons-net", name = "commons-net", version.ref 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "androidGradlePlugin" }
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
 vanniktech-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktechPublish" }

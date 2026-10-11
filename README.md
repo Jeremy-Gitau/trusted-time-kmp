@@ -138,6 +138,16 @@ The project uses the Gradle wrapper (Gradle 8.14.5) and JDK 17. You don't need G
 
 iOS targets require macOS with Xcode installed.
 
+### Running the samples
+
+```bash
+./gradlew :sample-app:installDebug   # Android: install on a connected device
+./gradlew :sample-jvm:run            # JVM: sync with NTP, then print trusted vs system time
+```
+
+The JVM sample runs for a minute. Meanwhile, change your computer's clock: the system time jumps, the trusted
+time does not.
+
 ---
 
 ## Project structure
@@ -153,6 +163,7 @@ trusted-time-kmp/
 │       ├── iosMain/           ← HTTP Date header implementation
 │       └── jsMain/            ← fetch implementation
 ├── sample-app/                ← Android demo app
+├── sample-jvm/                ← command-line JVM demo
 ├── gradle/libs.versions.toml  ← dependency versions
 └── gradlew                    ← Gradle wrapper
 ```
