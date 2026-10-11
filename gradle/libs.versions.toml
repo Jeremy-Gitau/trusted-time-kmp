@@ -1,0 +1,28 @@
+[versions]
+kotlin = "2.0.21"
+androidGradlePlugin = "8.5.2"
+androidMinSdk = "21"
+androidCompileSdk = "34"
+androidTargetSdk = "34"
+kotlinxDatetime = "0.6.1"
+kotlinxCoroutines = "1.9.0"
+playServicesTime = "16.0.1"
+apacheCommonsNet = "3.11.1"
+vanniktechPublish = "0.29.0"
+
+[libraries]
+kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+
+# Android
+play-services-time = { group = "com.google.android.gms", name = "play-services-time", version.ref = "playServicesTime" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
+
+# JVM
+apache-commons-net = { group = "commons-net", name = "commons-net", version.ref = "apacheCommonsNet" }
+
+[plugins]
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+android-library = { id = "com.android.library", version.ref = "androidGradlePlugin" }
+android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
+vanniktech-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktechPublish" }

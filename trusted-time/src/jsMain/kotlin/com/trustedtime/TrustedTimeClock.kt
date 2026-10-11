@@ -1,0 +1,57 @@
+package com.trustedtime
+
+import kotlinx.coroutines.await
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+import kotlin.js.Date
+
+/**
+ * JS actual — uses a HEAD request to time.cloudflare.com to read the
+ * server "Date" header as trusted time source. Works in both browser and Node.js.
+ */
+actual class TrustedTimeClock actual constructor() {
+
+    private var trustedMs: Double? = null
+    private var syncedPerformanceMs: Double = 0.0
+    private var synced = false
+    private var source = TimeSource.SYSTEM_FALLBACK
+
+    actual fun now(): Instant {
+        val trusted = trustedMs
+        return if (trusted != null && synced) {
+            source = TimeSource.TRUSTED
+            val elapsedMs = currentPerformanceMs() - syncedPerformanceMs
+            Instant.fromEpochMilliseconds((trusted + elapsedMs).toLong())
+        } else {
+            source = TimeSource.SYSTEM_FALLBACK
+            Clock.System.now()
+        }
+    }
+
+    actual suspend fun sync() {
+        try {
+            @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
+            val response = kotlinx.browser.window
+                .fetch("https://time.cloudflare.com", js("({ method: 'HEAD' })"))
+                .await()
+
+            val dateHeader = response.headers.get("Date")
+            if (dateHeader != null) {
+                trustedMs = Date(dateHeader).getTime()
+                syncedPerformanceMs = currentPerformanceMs()
+                synced = true
+            } else {
+                synced = false
+            }
+        } catch (e: Throwable) {
+            synced = false
+        }
+    }
+
+    actual fun isTimeSynced(): Boolean = synced
+
+    actual fun timeSource(): TimeSource = source
+
+    private fun currentPerformanceMs(): Double =
+        kotlinx.browser.window.performance.now()
+}
