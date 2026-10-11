@@ -65,8 +65,9 @@ or via dependency injection) rather than one per screen.
 ```kotlin
 val clock = TrustedTimeClock()
 
-// Suspends until the network sync finishes. Never throws — on failure
-// the clock keeps using the system time.
+// Suspends until the network sync finishes. Doesn't throw on network errors:
+// the clock keeps its previous sync, or the system time if it never synced.
+// Cancelling the coroutine cancels the sync, as usual for coroutines.
 scope.launch {
     clock.sync()
 }
@@ -122,7 +123,6 @@ These are tracked and will be fixed before a 1.0 release:
   compensated, so expect up to ~1 s of error. Fine for detecting a changed clock, not for precise
   timing.
 - `TrustedTimeClock` does not implement `kotlinx.datetime.Clock` yet.
-- Not thread-safe yet: sync state is shared across threads without synchronization.
 
 ---
 

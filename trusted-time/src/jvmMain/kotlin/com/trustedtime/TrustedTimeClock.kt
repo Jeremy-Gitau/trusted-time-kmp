@@ -6,6 +6,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import org.apache.commons.net.ntp.NTPUDPClient
 import java.net.InetAddress
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * JVM actual — fetches time from an NTP server using Apache Commons Net.
@@ -17,54 +18,59 @@ import java.net.InetAddress
 actual class TrustedTimeClock internal constructor(
     private val monotonicNanos: () -> Long,
     private val systemNow: () -> Instant,
+    private val fetchNtpTimeMs: suspend () -> Long,
 ) {
-    actual constructor() : this(System::nanoTime, Clock.System::now)
+    actual constructor() : this(System::nanoTime, Clock.System::now, ::queryNtpServer)
 
-    /** Trusted NTP time at the moment of sync */
-    private var trustedEpochMs: Long = 0L
+    /**
+     * Everything recorded at sync, replaced as a single object so a thread
+     * calling [now] never sees a half-updated state.
+     */
+    private class SyncState(
+        val trustedEpochMs: Long,
+        val monotonicAtSyncNanos: Long,
+    )
 
-    /** [monotonicNanos] reading taken at the same moment as [trustedEpochMs] */
-    private var monotonicAtSyncNanos: Long = 0L
-    private var synced = false
+    @Volatile
+    private var state: SyncState? = null
 
-    private val ntpHost = TrustedTimeConfig.Default.ntpHost
-    private val timeoutMs = TrustedTimeConfig.Default.timeoutMs
-
-    actual fun now(): Instant =
-        if (synced) {
-            val elapsedMs = (monotonicNanos() - monotonicAtSyncNanos) / 1_000_000
-            Instant.fromEpochMilliseconds(trustedEpochMs + elapsedMs)
-        } else {
-            systemNow()
-        }
+    actual fun now(): Instant {
+        val s = state ?: return systemNow()
+        val elapsedMs = (monotonicNanos() - s.monotonicAtSyncNanos) / 1_000_000
+        return Instant.fromEpochMilliseconds(s.trustedEpochMs + elapsedMs)
+    }
 
     actual suspend fun sync() {
-        withContext(Dispatchers.IO) {
-            try {
-                val client =
-                    NTPUDPClient().apply {
-                        defaultTimeout = timeoutMs
-                        open()
-                    }
-                val address = InetAddress.getByName(ntpHost)
-                val info = client.getTime(address)
-                client.close()
-
-                applySync(info.message.transmitTimeStamp.time)
-            } catch (e: Exception) {
-                synced = false
-            }
+        try {
+            applySync(fetchNtpTimeMs())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Keep the previous sync, if any: it is still valid.
         }
     }
 
     /** Records [ntpTimeMs] as the trusted time at this instant. */
     internal fun applySync(ntpTimeMs: Long) {
-        trustedEpochMs = ntpTimeMs
-        monotonicAtSyncNanos = monotonicNanos()
-        synced = true
+        state = SyncState(ntpTimeMs, monotonicNanos())
     }
 
-    actual fun isTimeSynced(): Boolean = synced
+    actual fun isTimeSynced(): Boolean = state != null
 
-    actual fun timeSource(): TimeSource = if (synced) TimeSource.TRUSTED else TimeSource.SYSTEM_FALLBACK
+    actual fun timeSource(): TimeSource = if (state != null) TimeSource.TRUSTED else TimeSource.SYSTEM_FALLBACK
 }
+
+private suspend fun queryNtpServer(): Long =
+    withContext(Dispatchers.IO) {
+        val config = TrustedTimeConfig.Default
+        val client = NTPUDPClient()
+        try {
+            client.defaultTimeout = config.timeoutMs
+            client.open()
+            client
+                .getTime(InetAddress.getByName(config.ntpHost))
+                .message.transmitTimeStamp.time
+        } finally {
+            client.close()
+        }
+    }

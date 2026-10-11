@@ -3,6 +3,7 @@ package com.trustedtime
 import kotlinx.coroutines.await
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.js.Date
 
 /**
@@ -37,11 +38,11 @@ actual class TrustedTimeClock actual constructor() {
                 trustedMs = Date(dateHeader).getTime()
                 syncedPerformanceMs = currentPerformanceMs()
                 synced = true
-            } else {
-                synced = false
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Throwable) {
-            synced = false
+            // Keep the previous sync, if any: it is still valid.
         }
     }
 

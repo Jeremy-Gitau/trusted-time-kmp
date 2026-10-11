@@ -2,45 +2,59 @@ package com.trustedtime
 
 import android.annotation.SuppressLint
 import android.content.Context
-import com.google.android.gms.tasks.Tasks
+import com.google.android.gms.tasks.Task
 import com.google.android.gms.time.TrustedTime
 import com.google.android.gms.time.TrustedTimeClient
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * Android actual — backed by Google Play Services TrustedTime API.
  */
 actual class TrustedTimeClock actual constructor() {
+    /** Non-null once synced; a single reference, so readers never see a half-updated state. */
+    @Volatile
     private var client: TrustedTimeClient? = null
-    private var synced = false
 
     actual fun now(): Instant = trustedMillis()?.let(Instant::fromEpochMilliseconds) ?: Clock.System.now()
 
     actual suspend fun sync() {
-        withContext(Dispatchers.IO) {
-            try {
-                val ctx =
-                    TrustedTimeInitializer.appContext
-                        ?: error("Call TrustedTimeInitializer.init(context) first")
-                val task = TrustedTime.createClient(ctx)
-                client = Tasks.await(task)
-                synced = true
-            } catch (e: Exception) {
-                synced = false
-            }
+        try {
+            val ctx =
+                TrustedTimeInitializer.appContext
+                    ?: error("Call TrustedTimeInitializer.init(context) first")
+            client = TrustedTime.createClient(ctx).awaitResult()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Keep the previous client, if any: it is still valid.
         }
     }
 
-    actual fun isTimeSynced(): Boolean = synced
+    actual fun isTimeSynced(): Boolean = client != null
 
     actual fun timeSource(): TimeSource = if (trustedMillis() != null) TimeSource.TRUSTED else TimeSource.SYSTEM_FALLBACK
 
     // Null until Play Services has a trusted time signal (e.g. right after boot)
-    private fun trustedMillis(): Long? = if (synced) client?.computeCurrentUnixEpochMillis() else null
+    private fun trustedMillis(): Long? = client?.computeCurrentUnixEpochMillis()
 }
+
+/** Suspends until the task completes, without blocking a thread. */
+private suspend fun <T> Task<T>.awaitResult(): T =
+    suspendCancellableCoroutine { cont ->
+        addOnCompleteListener { task ->
+            val error = task.exception
+            when {
+                error != null -> cont.resumeWithException(error)
+                task.isCanceled -> cont.cancel()
+                else -> cont.resume(task.result)
+            }
+        }
+    }
 
 /**
  * Call [TrustedTimeInitializer.init] once in your Application.onCreate().
