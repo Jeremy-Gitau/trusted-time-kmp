@@ -21,10 +21,10 @@ Uses platform-native trusted time sources so users cannot spoof your app's clock
 Add to your shared module's `build.gradle.kts`:
 
 ```kotlin
-implementation("io.github.yourusername:trusted-time-kmp:1.0.0")
+implementation("io.github.jeremy-gitau:trusted-time-kmp:1.0.0")
 ```
 
-> Replace `yourusername` with your actual Maven Central group ID.
+> **Not yet published to Maven Central.** Until then, clone this repo and depend on the `:trusted-time` module directly.
 
 ---
 
@@ -135,7 +135,7 @@ trusted-time-kmp/
 ## License
 
 ```
-Copyright 2024 Your Name
+Copyright 2026 Jeremy Gitau
 
 Licensed under the Apache License, Version 2.0
 ```

@@ -70,7 +70,7 @@ mavenPublishing {
     signAllPublications()
 
     coordinates(
-        groupId = "io.github.yourusername",   // ← change to your GitHub username
+        groupId = "io.github.jeremy-gitau",
         artifactId = "trusted-time-kmp",
         version = "1.0.0"
     )
@@ -78,7 +78,7 @@ mavenPublishing {
     pom {
         name.set("Trusted Time KMP")
         description.set("A Kotlin Multiplatform SDK for tamper-proof time across Android, iOS, JVM and JS")
-        url.set("https://github.com/yourusername/trusted-time-kmp") // ← change
+        url.set("https://github.com/Jeremy-Gitau/trusted-time-kmp")
 
         licenses {
             license {
@@ -89,14 +89,16 @@ mavenPublishing {
 
         developers {
             developer {
-                id.set("yourusername")      // ← change
-                name.set("Your Name")       // ← change
-                email.set("you@email.com")  // ← change
+                id.set("Jeremy-Gitau")
+                name.set("Jeremy Gitau")
+                email.set("56400436+Jeremy-Gitau@users.noreply.github.com")
             }
         }
 
         scm {
-            url.set("https://github.com/yourusername/trusted-time-kmp") // ← change
+            url.set("https://github.com/Jeremy-Gitau/trusted-time-kmp")
+            connection.set("scm:git:git://github.com/Jeremy-Gitau/trusted-time-kmp.git")
+            developerConnection.set("scm:git:ssh://git@github.com/Jeremy-Gitau/trusted-time-kmp.git")
         }
     }
 }
