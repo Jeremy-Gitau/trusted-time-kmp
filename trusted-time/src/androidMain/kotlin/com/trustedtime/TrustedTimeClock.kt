@@ -3,8 +3,8 @@ package com.trustedtime
 import android.annotation.SuppressLint
 import android.content.Context
 import com.google.android.gms.tasks.Tasks
-import com.google.android.gms.timetrust.TrustedTime
-import com.google.android.gms.timetrust.TrustedTimeClient
+import com.google.android.gms.time.TrustedTime
+import com.google.android.gms.time.TrustedTimeClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
@@ -23,10 +23,11 @@ actual class TrustedTimeClock actual constructor() {
     private var source = TimeSource.SYSTEM_FALLBACK
 
     actual fun now(): Instant {
-        val c = client
-        return if (c != null && synced) {
+        // Null until Play Services has a trusted time signal (e.g. right after boot)
+        val trustedMs = if (synced) client?.computeCurrentUnixEpochMillis() else null
+        return if (trustedMs != null) {
             source = TimeSource.TRUSTED
-            Instant.fromEpochMilliseconds(c.computeCurrentUnixEpochMillis())
+            Instant.fromEpochMilliseconds(trustedMs)
         } else {
             source = TimeSource.SYSTEM_FALLBACK
             Clock.System.now()
