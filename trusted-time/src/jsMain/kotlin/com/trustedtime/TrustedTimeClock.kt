@@ -14,16 +14,13 @@ actual class TrustedTimeClock actual constructor() {
     private var trustedMs: Double? = null
     private var syncedPerformanceMs: Double = 0.0
     private var synced = false
-    private var source = TimeSource.SYSTEM_FALLBACK
 
     actual fun now(): Instant {
         val trusted = trustedMs
         return if (trusted != null && synced) {
-            source = TimeSource.TRUSTED
             val elapsedMs = currentPerformanceMs() - syncedPerformanceMs
             Instant.fromEpochMilliseconds((trusted + elapsedMs).toLong())
         } else {
-            source = TimeSource.SYSTEM_FALLBACK
             Clock.System.now()
         }
     }
@@ -50,7 +47,8 @@ actual class TrustedTimeClock actual constructor() {
 
     actual fun isTimeSynced(): Boolean = synced
 
-    actual fun timeSource(): TimeSource = source
+    actual fun timeSource(): TimeSource =
+        if (trustedMs != null && synced) TimeSource.TRUSTED else TimeSource.SYSTEM_FALLBACK
 
     private fun currentPerformanceMs(): Double =
         kotlinx.browser.window.performance.now()

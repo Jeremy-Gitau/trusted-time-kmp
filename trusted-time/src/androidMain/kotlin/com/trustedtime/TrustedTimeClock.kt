@@ -17,19 +17,9 @@ actual class TrustedTimeClock actual constructor() {
 
     private var client: TrustedTimeClient? = null
     private var synced = false
-    private var source = TimeSource.SYSTEM_FALLBACK
 
-    actual fun now(): Instant {
-        // Null until Play Services has a trusted time signal (e.g. right after boot)
-        val trustedMs = if (synced) client?.computeCurrentUnixEpochMillis() else null
-        return if (trustedMs != null) {
-            source = TimeSource.TRUSTED
-            Instant.fromEpochMilliseconds(trustedMs)
-        } else {
-            source = TimeSource.SYSTEM_FALLBACK
-            Clock.System.now()
-        }
-    }
+    actual fun now(): Instant =
+        trustedMillis()?.let(Instant::fromEpochMilliseconds) ?: Clock.System.now()
 
     actual suspend fun sync() {
         withContext(Dispatchers.IO) {
@@ -47,7 +37,12 @@ actual class TrustedTimeClock actual constructor() {
 
     actual fun isTimeSynced(): Boolean = synced
 
-    actual fun timeSource(): TimeSource = source
+    actual fun timeSource(): TimeSource =
+        if (trustedMillis() != null) TimeSource.TRUSTED else TimeSource.SYSTEM_FALLBACK
+
+    // Null until Play Services has a trusted time signal (e.g. right after boot)
+    private fun trustedMillis(): Long? =
+        if (synced) client?.computeCurrentUnixEpochMillis() else null
 }
 
 /**

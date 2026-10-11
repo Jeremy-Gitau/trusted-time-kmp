@@ -17,17 +17,14 @@ actual class TrustedTimeClock actual constructor() {
     /** Difference between trusted NTP time and System.currentTimeMillis() at sync time */
     private var offsetMs: Long = 0L
     private var synced = false
-    private var source = TimeSource.SYSTEM_FALLBACK
 
     private val ntpHost = TrustedTimeConfig.Default.ntpHost
     private val timeoutMs = TrustedTimeConfig.Default.timeoutMs
 
     actual fun now(): Instant {
         return if (synced) {
-            source = TimeSource.TRUSTED
             Instant.fromEpochMilliseconds(System.currentTimeMillis() + offsetMs)
         } else {
-            source = TimeSource.SYSTEM_FALLBACK
             Clock.System.now()
         }
     }
@@ -54,5 +51,6 @@ actual class TrustedTimeClock actual constructor() {
 
     actual fun isTimeSynced(): Boolean = synced
 
-    actual fun timeSource(): TimeSource = source
+    actual fun timeSource(): TimeSource =
+        if (synced) TimeSource.TRUSTED else TimeSource.SYSTEM_FALLBACK
 }

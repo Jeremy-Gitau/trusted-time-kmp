@@ -46,7 +46,8 @@ expect class TrustedTimeClock() {
     fun isTimeSynced(): Boolean
 
     /**
-     * Returns the [TimeSource] of the most recent [now] call.
+     * Returns the [TimeSource] that [now] would use if called right now.
+     * Safe to call before [now]; does not depend on earlier calls.
      */
     fun timeSource(): TimeSource
 }

@@ -14,10 +14,10 @@ cheap and works offline.
 
 | Platform | Trusted time source                           | Status                  |
 |----------|-----------------------------------------------|-------------------------|
-| Android  | Google Play Services TrustedTime API          | ✅ Compiles             |
-| JVM      | NTP via Apache Commons Net (`pool.ntp.org`)   | ⚠️ Compiles, see limits |
-| iOS      | HTTP `Date` header + device uptime            | 🚧 Not yet verified     |
-| JS       | HTTP `Date` header via `fetch`                | 🚧 Not yet verified     |
+| Android  | Google Play Services TrustedTime API          | ✅ Tested on a device   |
+| JVM      | NTP via Apache Commons Net (`pool.ntp.org`)   | ⚠️ Builds, see limits   |
+| iOS      | HTTP `Date` header + device uptime            | 🚧 Builds, sync untested |
+| JS       | HTTP `Date` header via `fetch`                | 🚧 Builds, sync untested |
 
 ---
 
@@ -76,7 +76,7 @@ scope.launch {
 
 ```kotlin
 val now: Instant = clock.now()              // always returns a value
-val source: TimeSource = clock.timeSource() // source of the last now() call
+val source: TimeSource = clock.timeSource() // what now() would use right now
 val synced: Boolean = clock.isTimeSynced()  // has a sync ever succeeded?
 
 if (source == TimeSource.TRUSTED) {
@@ -97,7 +97,7 @@ class TrustedTimeClock() {
     fun now(): Instant            // Current time (trusted, or system fallback)
     suspend fun sync()            // Network sync; call once at startup
     fun isTimeSynced(): Boolean   // Whether a sync has succeeded
-    fun timeSource(): TimeSource  // Source used by the most recent now() call
+    fun timeSource(): TimeSource  // Source now() would use right now
 }
 
 enum class TimeSource {
@@ -124,8 +124,7 @@ These are tracked and will be fixed before a 1.0 release:
   compensated, so expect up to ~1 s of error. Fine for detecting a changed clock, not for precise
   timing.
 - `TrustedTimeClock` does not implement `kotlinx.datetime.Clock` yet.
-- Not thread-safe yet; `timeSource()` reflects whichever `now()` call ran last on any thread.
-- The sample app does not build yet.
+- Not thread-safe yet: sync state is shared across threads without synchronization.
 
 ---
 
