@@ -12,9 +12,6 @@ import kotlinx.datetime.Instant
 
 /**
  * Android actual — backed by Google Play Services TrustedTime API.
- *
- * IMPORTANT: Call [TrustedTimeInitializer.init] from your Application.onCreate()
- * before constructing this class.
  */
 actual class TrustedTimeClock actual constructor() {
 
