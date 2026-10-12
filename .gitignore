@@ -12,3 +12,6 @@ captures/
 # Publishing secrets — NEVER commit these
 gradle.properties.local
 secring.gpg
+
+# Xcode per-user state
+xcuserdata/

@@ -15,10 +15,10 @@ kotlin {
         publishLibraryVariants("release")
     }
 
-    // iOS
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
+    // iOS (the framework is what Swift apps, like sample-ios, link against)
+    listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach {
+        it.binaries.framework { baseName = "TrustedTime" }
+    }
 
     // JVM
     jvm {

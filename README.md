@@ -16,7 +16,7 @@ cheap and works offline.
 |----------|-----------------------------------------------|-------------------------|
 | Android  | Google Play Services TrustedTime API          | ✅ Tested on a device   |
 | JVM      | NTP via Apache Commons Net (`pool.ntp.org`)   | ✅ Builds, unit tested  |
-| iOS      | HTTP `Date` header + monotonic clock          | 🚧 Unit tested, sync untested |
+| iOS      | HTTP `Date` header + monotonic clock          | ✅ Tested on a simulator |
 | JS       | HTTP `Date` header via `fetch`                | 🚧 Builds, sync untested |
 
 ---
@@ -141,7 +141,11 @@ iOS targets require macOS with Xcode installed.
 ```bash
 ./gradlew :sample-app:installDebug   # Android: install on a connected device
 ./gradlew :sample-jvm:run            # JVM: sync with NTP, then print trusted vs system time
+open sample-ios/SampleIos.xcodeproj  # iOS: then press Run in Xcode
 ```
+
+The iOS sample's Xcode build runs Gradle to compile the Kotlin framework first, so Kotlin changes are picked
+up on every Run. It needs JDK 17 installed.
 
 The JVM sample runs for a minute. Meanwhile, change your computer's clock: the system time jumps, the trusted
 time does not.
@@ -162,6 +166,7 @@ trusted-time-kmp/
 │       └── jsMain/            ← fetch implementation
 ├── sample-app/                ← Android demo app
 ├── sample-jvm/                ← command-line JVM demo
+├── sample-ios/                ← SwiftUI demo app (Xcode project)
 ├── gradle/libs.versions.toml  ← dependency versions
 └── gradlew                    ← Gradle wrapper
 ```

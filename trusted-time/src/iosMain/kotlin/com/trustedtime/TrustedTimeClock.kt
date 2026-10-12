@@ -22,7 +22,7 @@ import kotlin.coroutines.resume
 
 /**
  * iOS actual — reads the "Date" header of an HTTPS response from
- * time.cloudflare.com as the trusted time.
+ * www.apple.com as the trusted time.
  *
  * After sync, time is advanced with CLOCK_MONOTONIC_RAW, a counter that is
  * unaffected by changes to the system clock and keeps running while the
@@ -74,12 +74,12 @@ actual class TrustedTimeClock internal constructor(
 private fun continuousMonotonicNanos(): Long = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW.convert()).toLong()
 
 /**
- * HEAD request to time.cloudflare.com; returns its "Date" header (UTC) in epoch
+ * HEAD request to www.apple.com; returns its "Date" header (UTC) in epoch
  * milliseconds, or null if missing. Cancelling the coroutine cancels the request.
  */
 private suspend fun fetchServerDateMs(): Long? =
     suspendCancellableCoroutine { cont ->
-        val url = NSURL.URLWithString("https://time.cloudflare.com")!!
+        val url = NSURL.URLWithString("https://www.apple.com")!!
         val request =
             NSMutableURLRequest.requestWithURL(url).apply {
                 setHTTPMethod("HEAD")
@@ -87,7 +87,8 @@ private suspend fun fetchServerDateMs(): Long? =
             }
         val task =
             NSURLSession.sharedSession.dataTaskWithRequest(request) { _, response, _ ->
-                val dateStr = (response as? NSHTTPURLResponse)?.allHeaderFields?.get("Date") as? String
+                // Case-insensitive: HTTP/2 servers send the header as "date"
+                val dateStr = (response as? NSHTTPURLResponse)?.valueForHTTPHeaderField("Date")
                 val formatter =
                     NSDateFormatter().apply {
                         dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
