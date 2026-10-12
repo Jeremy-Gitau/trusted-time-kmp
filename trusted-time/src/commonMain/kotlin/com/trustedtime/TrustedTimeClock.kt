@@ -1,5 +1,6 @@
 package com.trustedtime
 
+import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 
 /**
@@ -14,7 +15,8 @@ enum class TimeSource {
 }
 
 /**
- * Cross-platform tamper-proof clock.
+ * Cross-platform tamper-proof clock. It is a [Clock], so it can be used anywhere a [Clock] is
+ * expected, e.g. in place of [Clock.System].
  *
  * Usage:
  * ```
@@ -26,12 +28,12 @@ enum class TimeSource {
  * val synced: Boolean = clock.isTimeSynced()
  * ```
  */
-expect class TrustedTimeClock() {
+expect class TrustedTimeClock() : Clock {
     /**
      * Returns the current [Instant].
      * Always returns a value — falls back to system clock if not yet synced.
      */
-    fun now(): Instant
+    override fun now(): Instant
 
     /**
      * Suspends until a trusted time sync is complete.

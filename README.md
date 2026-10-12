@@ -88,6 +88,13 @@ Before a successful sync, or when no trusted time is available, `now()` falls ba
 clock and `timeSource()` returns `SYSTEM_FALLBACK`. Always check the source before relying on the
 time for anything security-sensitive.
 
+`TrustedTimeClock` is a `kotlinx.datetime.Clock`, so you can pass it anywhere a `Clock` is expected,
+e.g. in place of `Clock.System`:
+
+```kotlin
+val today: LocalDate = clock.todayIn(TimeZone.currentSystemDefault())
+```
+
 ### From Swift (iOS)
 
 The library is exposed to Swift as the `TrustedTime` framework. `sync()` becomes an `async`
@@ -115,8 +122,8 @@ See `sample-ios/` for a complete app.
 ## API reference
 
 ```kotlin
-class TrustedTimeClock() {
-    fun now(): Instant            // Current time (trusted, or system fallback)
+class TrustedTimeClock() : Clock {
+    override fun now(): Instant   // Current time (trusted, or system fallback)
     suspend fun sync()            // Network sync; call once at startup
     fun isTimeSynced(): Boolean   // Whether a sync has succeeded
     fun timeSource(): TimeSource  // Source now() would use right now
@@ -128,7 +135,7 @@ enum class TimeSource {
 }
 ```
 
-`Instant` is `kotlinx.datetime.Instant`.
+`Clock` and `Instant` are from `kotlinx.datetime`.
 
 ---
 
@@ -139,7 +146,6 @@ These are tracked and will be fixed before a 1.0 release:
 - **iOS:** the HTTP `Date` header only has 1-second precision and network delay isn't
   compensated, so expect up to ~1 s of error. Fine for detecting a changed clock, not for precise
   timing.
-- `TrustedTimeClock` does not implement `kotlinx.datetime.Clock` yet.
 
 ---
 

@@ -32,7 +32,7 @@ actual class TrustedTimeClock internal constructor(
     private val monotonicNanos: () -> Long,
     private val systemNow: () -> Instant,
     private val fetchServerTimeMs: suspend () -> Long?,
-) {
+) : Clock {
     actual constructor() : this(::continuousMonotonicNanos, Clock.System::now, ::fetchServerDateMs)
 
     /**
@@ -47,7 +47,7 @@ actual class TrustedTimeClock internal constructor(
     @Volatile
     private var state: SyncState? = null
 
-    actual fun now(): Instant {
+    actual override fun now(): Instant {
         val s = state ?: return systemNow()
         val elapsedMs = (monotonicNanos() - s.monotonicAtSyncNanos) / 1_000_000
         return Instant.fromEpochMilliseconds(s.trustedEpochMs + elapsedMs)

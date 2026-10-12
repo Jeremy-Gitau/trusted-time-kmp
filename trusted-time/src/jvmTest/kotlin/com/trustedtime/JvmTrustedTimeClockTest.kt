@@ -5,7 +5,11 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -46,6 +50,16 @@ class JvmTrustedTimeClockTest {
 
         assertEquals(ntpTime + 1_000, clock.now().toEpochMilliseconds())
         assertEquals(TimeSource.TRUSTED, clock.timeSource())
+    }
+
+    @Test
+    fun worksAnywhereAClockIsExpected() {
+        fakeSystemTime = Instant.parse("2020-01-01T00:00:00Z") // device clock set back to 2020
+        clock.applySync(Instant.parse("2026-10-12T12:00:00Z").toEpochMilliseconds())
+
+        val asClock: Clock = clock
+
+        assertEquals(LocalDate(2026, 10, 12), asClock.todayIn(TimeZone.UTC))
     }
 
     @Test

@@ -15,12 +15,12 @@ import kotlin.coroutines.resumeWithException
 /**
  * Android actual — backed by Google Play Services TrustedTime API.
  */
-actual class TrustedTimeClock actual constructor() {
+actual class TrustedTimeClock actual constructor() : Clock {
     /** Non-null once synced; a single reference, so readers never see a half-updated state. */
     @Volatile
     private var client: TrustedTimeClient? = null
 
-    actual fun now(): Instant = trustedMillis()?.let(Instant::fromEpochMilliseconds) ?: Clock.System.now()
+    actual override fun now(): Instant = trustedMillis()?.let(Instant::fromEpochMilliseconds) ?: Clock.System.now()
 
     actual suspend fun sync() {
         try {
