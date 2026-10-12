@@ -83,7 +83,7 @@ private fun SampleScreen() {
                 clock.sync()
                 status =
                     if (clock.isTimeSynced()) {
-                        "✅ Synced — source: ${clock.timeSource()}"
+                        "✅ Synced"
                     } else {
                         "⚠️ Sync failed — using system clock"
                     }
