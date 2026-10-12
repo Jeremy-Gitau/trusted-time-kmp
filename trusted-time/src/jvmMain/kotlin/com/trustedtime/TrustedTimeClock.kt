@@ -6,6 +6,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import org.apache.commons.net.ntp.NTPUDPClient
 import java.net.InetAddress
+import java.time.Duration
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -65,7 +66,7 @@ private suspend fun queryNtpServer(): Long =
         val config = TrustedTimeConfig.Default
         val client = NTPUDPClient()
         try {
-            client.defaultTimeout = config.timeoutMs
+            client.setDefaultTimeout(Duration.ofMillis(config.timeoutMs.toLong()))
             client.open()
             client
                 .getTime(InetAddress.getByName(config.ntpHost))

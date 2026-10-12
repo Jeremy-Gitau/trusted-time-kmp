@@ -1,4 +1,6 @@
 import com.vanniktech.maven.publish.SonatypeHost
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -9,9 +11,6 @@ plugins {
 kotlin {
     // Android
     androidTarget {
-        compilations.all {
-            kotlinOptions { jvmTarget = "1.8" }
-        }
         publishLibraryVariants("release")
     }
 
@@ -21,11 +20,7 @@ kotlin {
     }
 
     // JVM
-    jvm {
-        compilations.all {
-            kotlinOptions { jvmTarget = "1.8" }
-        }
-    }
+    jvm()
 
     sourceSets {
         commonMain.dependencies {
@@ -48,6 +43,11 @@ kotlin {
 
         // iOS has no extra dependencies (uses platform APIs)
     }
+}
+
+// Android and JVM bytecode: Java 8, so the library runs on as many JVMs as possible
+tasks.withType<KotlinJvmCompile>().configureEach {
+    compilerOptions.jvmTarget.set(JvmTarget.JVM_1_8)
 }
 
 android {
