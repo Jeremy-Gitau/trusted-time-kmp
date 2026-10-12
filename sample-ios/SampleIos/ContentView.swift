@@ -33,10 +33,21 @@ struct ContentView: View {
                 let now = clock.now()
                 let label = clock.timeSource() == .trusted ? "🔒 Trusted" : "⚠️ System Fallback"
                 let offsetMs = now.toEpochMilliseconds() - Int64(Date().timeIntervalSince1970 * 1000)
-                time = "\(label)\n\(now)\nSystem clock is off by \(offsetMs) ms"
+                time = "\(label)\n\(now)\n\(describeOffset(offsetMs))"
             }
             .buttonStyle(.bordered)
         }
         .padding()
     }
+}
+
+/// For example "System clock is 2 days, 8 seconds behind". offsetMs is trusted minus system time.
+private func describeOffset(_ offsetMs: Int64) -> String {
+    let size = abs(offsetMs)
+    if size < 1000 { return "System clock is correct (within \(size) ms)" }
+    let total = size / 1000
+    let parts = [(total / 86400, "day"), (total % 86400 / 3600, "hour"), (total % 3600 / 60, "minute"), (total % 60, "second")]
+        .filter { $0.0 > 0 }
+        .map { $0.0 == 1 ? "1 \($0.1)" : "\($0.0) \($0.1)s" }
+    return "System clock is \(parts.joined(separator: ", ")) \(offsetMs > 0 ? "behind" : "ahead")"
 }

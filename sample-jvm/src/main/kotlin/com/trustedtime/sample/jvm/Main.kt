@@ -29,6 +29,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 /**
  * Shows the trusted time next to the system clock, updated live. Move your computer's clock back:
@@ -92,6 +94,23 @@ private fun SampleScreen() {
         Text(if (source == TimeSource.TRUSTED) "🔒 Trusted" else "⚠️ System Fallback")
         Text("Trusted: $trusted", fontFamily = FontFamily.Monospace)
         Text("System:  $system", fontFamily = FontFamily.Monospace)
-        Text("System clock is off by ${trusted.toEpochMilliseconds() - system.toEpochMilliseconds()} ms")
+        Text(describeOffset(trusted, system))
     }
+}
+
+/** For example "System clock is 2 days, 8 seconds behind". */
+private fun describeOffset(
+    trusted: Instant,
+    system: Instant,
+): String {
+    val offset = system - trusted
+    val size = offset.absoluteValue
+    if (size < 1.seconds) return "System clock is correct (within ${size.inWholeMilliseconds} ms)"
+    val parts =
+        size
+            .toComponents { days, hours, minutes, seconds, _ ->
+                listOf(days to "day", hours.toLong() to "hour", minutes.toLong() to "minute", seconds.toLong() to "second")
+            }.filter { (amount, _) -> amount > 0 }
+            .joinToString(", ") { (amount, unit) -> if (amount == 1L) "1 $unit" else "$amount ${unit}s" }
+    return "System clock is $parts ${if (offset.isPositive()) "ahead" else "behind"}"
 }
