@@ -39,17 +39,60 @@ class JvmTrustedTimeClockTest {
     }
 
     @Test
-    fun changingSystemClockAfterSyncDoesNotAffectNow() {
+    fun movingSystemClockBackDoesNotAffectNow() {
         val ntpTime = 1_700_000_000_000L
         fakeSystemTime = Instant.fromEpochMilliseconds(ntpTime)
         clock.applySync(ntpTime)
 
-        // User moves the device clock forward by a year; only 1 real second passes
-        fakeSystemTime = Instant.fromEpochMilliseconds(ntpTime + 365L * 24 * 60 * 60 * 1000)
+        // User moves the clock back a year, e.g. to extend a trial; 1 real second passes
+        fakeSystemTime = Instant.fromEpochMilliseconds(ntpTime - 365L * 24 * 60 * 60 * 1000)
         fakeMonotonicNanos += 1_000_000_000L
 
         assertEquals(ntpTime + 1_000, clock.now().toEpochMilliseconds())
         assertEquals(TimeSource.TRUSTED, clock.timeSource())
+    }
+
+    @Test
+    fun movingSystemClockForwardFallsBackToSystemTime() {
+        val ntpTime = 1_700_000_000_000L
+        fakeSystemTime = Instant.fromEpochMilliseconds(ntpTime)
+        clock.applySync(ntpTime)
+
+        val yearAhead = Instant.fromEpochMilliseconds(ntpTime + 365L * 24 * 60 * 60 * 1000)
+        fakeSystemTime = yearAhead
+        fakeMonotonicNanos += 1_000_000_000L
+
+        assertEquals(TimeSource.SYSTEM_FALLBACK, clock.timeSource())
+        assertEquals(yearAhead, clock.now())
+        assertTrue(clock.isTimeSynced())
+    }
+
+    @Test
+    fun sleepFallsBackUntilNextSync() =
+        runBlocking {
+            val ntpTime = 1_700_000_000_000L
+            fakeSystemTime = Instant.fromEpochMilliseconds(ntpTime)
+            fakeNtp = { ntpTime }
+            clock.sync()
+
+            // 8 hours of sleep: the system clock moves on, the monotonic counter doesn't
+            val eightHours = 8L * 60 * 60 * 1000
+            fakeSystemTime = Instant.fromEpochMilliseconds(ntpTime + eightHours)
+            assertEquals(TimeSource.SYSTEM_FALLBACK, clock.timeSource())
+
+            fakeNtp = { ntpTime + eightHours }
+            clock.sync()
+
+            assertEquals(TimeSource.TRUSTED, clock.timeSource())
+            assertEquals(ntpTime + eightHours, clock.now().toEpochMilliseconds())
+        }
+
+    @Test
+    fun smallSystemClockCorrectionsAreAllowed() {
+        val hourMs = 60L * 60 * 1000
+        assertFalse(systemClockRanAhead(elapsedMs = hourMs, systemElapsedMs = hourMs + 5_000))
+        assertTrue(systemClockRanAhead(elapsedMs = hourMs, systemElapsedMs = hourMs + 10_000))
+        assertFalse(systemClockRanAhead(elapsedMs = 0, systemElapsedMs = 2_000))
     }
 
     @Test

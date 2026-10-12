@@ -15,6 +15,10 @@ import kotlin.time.Instant
  * After sync, time is advanced with [System.nanoTime], a monotonic counter
  * that is unaffected by changes to the system clock, so subsequent [now]
  * calls are cheap (no network) and can't be spoofed by changing the clock.
+ *
+ * On macOS and Linux that counter pauses while the computer sleeps. A sleep
+ * looks the same as the clock being moved forward, so either one makes the
+ * clock fall back to the system time until the next [sync].
  */
 actual class TrustedTimeClock internal constructor(
     private val monotonicNanos: () -> Long,
@@ -26,16 +30,13 @@ actual class TrustedTimeClock internal constructor(
     private class SyncState(
         val trustedEpochMs: Long,
         val monotonicAtSyncNanos: Long,
+        val systemAtSyncMs: Long,
     )
 
     @Volatile
     private var state: SyncState? = null
 
-    actual override fun now(): Instant {
-        val s = state ?: return systemNow()
-        val elapsedMs = (monotonicNanos() - s.monotonicAtSyncNanos) / 1_000_000
-        return Instant.fromEpochMilliseconds(s.trustedEpochMs + elapsedMs)
-    }
+    actual override fun now(): Instant = trustedMillis()?.let(Instant::fromEpochMilliseconds) ?: systemNow()
 
     actual suspend fun sync() {
         try {
@@ -47,13 +48,30 @@ actual class TrustedTimeClock internal constructor(
     }
 
     internal fun applySync(ntpTimeMs: Long) {
-        state = SyncState(ntpTimeMs, monotonicNanos())
+        state = SyncState(ntpTimeMs, monotonicNanos(), systemNow().toEpochMilliseconds())
     }
 
     actual fun isTimeSynced(): Boolean = state != null
 
-    actual fun timeSource(): TimeSource = if (state != null) TimeSource.TRUSTED else TimeSource.SYSTEM_FALLBACK
+    actual fun timeSource(): TimeSource = if (trustedMillis() != null) TimeSource.TRUSTED else TimeSource.SYSTEM_FALLBACK
+
+    private fun trustedMillis(): Long? {
+        val s = state ?: return null
+        val elapsedMs = (monotonicNanos() - s.monotonicAtSyncNanos) / 1_000_000
+        val systemElapsedMs = systemNow().toEpochMilliseconds() - s.systemAtSyncMs
+        if (systemClockRanAhead(elapsedMs, systemElapsedMs)) return null
+        return s.trustedEpochMs + elapsedMs
+    }
 }
+
+/**
+ * Whether the system clock moved forward by clearly more than the monotonic counter: the computer
+ * slept, or the clock was moved forward. Allows 2 s plus 0.1% for the system's own clock corrections.
+ */
+internal fun systemClockRanAhead(
+    elapsedMs: Long,
+    systemElapsedMs: Long,
+): Boolean = systemElapsedMs - elapsedMs > 2_000 + elapsedMs / 1_000
 
 private const val NTP_HOST = "pool.ntp.org"
 private val NTP_TIMEOUT: Duration = Duration.ofSeconds(5)

@@ -8,8 +8,8 @@ import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Syncs with NTP, then prints trusted time next to the system clock once a
- * second for a minute. Change your computer's clock while it runs: the system time jumps,
- * the trusted time does not.
+ * second for a minute. Move your computer's clock back while it runs: the system time jumps,
+ * the trusted time does not. Moving it forward switches the source to SYSTEM_FALLBACK.
  */
 fun main() =
     runBlocking {
@@ -29,7 +29,7 @@ fun main() =
             val trusted = clock.now()
             val system = Clock.System.now()
             val diffMs = system.toEpochMilliseconds() - trusted.toEpochMilliseconds()
-            println("trusted=$trusted  system=$system  system-trusted=${diffMs}ms")
+            println("trusted=$trusted  system=$system  system-trusted=${diffMs}ms  source=${clock.timeSource()}")
             delay(1_000.milliseconds)
         }
     }
