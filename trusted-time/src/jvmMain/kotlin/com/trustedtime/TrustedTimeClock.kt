@@ -61,15 +61,17 @@ actual class TrustedTimeClock internal constructor(
     actual fun timeSource(): TimeSource = if (state != null) TimeSource.TRUSTED else TimeSource.SYSTEM_FALLBACK
 }
 
+private const val NTP_HOST = "pool.ntp.org"
+private val NTP_TIMEOUT: Duration = Duration.ofSeconds(5)
+
 private suspend fun queryNtpServer(): Long =
     withContext(Dispatchers.IO) {
-        val config = TrustedTimeConfig.Default
         val client = NTPUDPClient()
         try {
-            client.setDefaultTimeout(Duration.ofMillis(config.timeoutMs.toLong()))
+            client.setDefaultTimeout(NTP_TIMEOUT)
             client.open()
             client
-                .getTime(InetAddress.getByName(config.ntpHost))
+                .getTime(InetAddress.getByName(NTP_HOST))
                 .message.transmitTimeStamp.time
         } finally {
             client.close()
