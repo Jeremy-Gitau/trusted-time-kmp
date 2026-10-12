@@ -4,14 +4,23 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.android.library)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.vanniktech.publish)
 }
 
 kotlin {
     // Android
-    androidTarget {
-        publishLibraryVariants("release")
+    android {
+        namespace = "com.trustedtime"
+        compileSdk =
+            libs.versions.androidCompileSdk
+                .get()
+                .toInt()
+        minSdk =
+            libs.versions.androidMinSdk
+                .get()
+                .toInt()
+        withHostTestBuilder {} // run commonTest on the JVM for Android too
     }
 
     // iOS (the framework is what Swift apps, like sample-ios, link against)
@@ -51,20 +60,6 @@ kotlin {
 // Android and JVM bytecode: Java 8, so the library runs on as many JVMs as possible
 tasks.withType<KotlinJvmCompile>().configureEach {
     compilerOptions.jvmTarget.set(JvmTarget.JVM_1_8)
-}
-
-android {
-    namespace = "com.trustedtime"
-    compileSdk =
-        libs.versions.androidCompileSdk
-            .get()
-            .toInt()
-    defaultConfig {
-        minSdk =
-            libs.versions.androidMinSdk
-                .get()
-                .toInt()
-    }
 }
 
 // ─── Maven Central Publishing ───────────────────────────────────────────────

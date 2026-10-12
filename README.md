@@ -153,12 +153,13 @@ These are tracked and will be fixed before a 1.0 release:
 
 ## Building
 
-The project uses the Gradle wrapper (Gradle 8.14.5) and JDK 17. You don't need Gradle installed.
+The project uses the Gradle wrapper (Gradle 9.8.1) and JDK 17. You don't need Gradle installed.
 
 ```bash
 ./gradlew :trusted-time:compileKotlinJvm               # JVM
-./gradlew :trusted-time:compileDebugKotlinAndroid      # Android
+./gradlew :trusted-time:compileAndroidMain             # Android
 ./gradlew :trusted-time:jvmTest                        # run tests on the JVM
+./gradlew :trusted-time:testAndroidHostTest            # run tests for Android (on the JVM)
 ./gradlew :trusted-time:iosSimulatorArm64Test          # run tests on the iOS simulator
 ./ktlint.sh                                            # format, then check code style
 ```
