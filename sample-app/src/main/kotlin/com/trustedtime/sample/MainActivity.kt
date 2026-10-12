@@ -41,7 +41,6 @@ class MainActivity : AppCompatActivity() {
             timeText.text = "$label\n$now"
         }
 
-        // Show fallback time immediately
         timeText.text = "Press 'Get Time' to read the clock"
     }
 }

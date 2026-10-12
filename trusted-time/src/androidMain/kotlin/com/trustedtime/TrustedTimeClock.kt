@@ -12,9 +12,7 @@ import kotlin.coroutines.resumeWithException
 import kotlin.time.Clock
 import kotlin.time.Instant
 
-/**
- * Android actual — backed by Google Play Services TrustedTime API.
- */
+/** Backed by the Google Play Services TrustedTime API. */
 actual class TrustedTimeClock actual constructor() : Clock {
     /** Non-null once synced; a single reference, so readers never see a half-updated state. */
     @Volatile

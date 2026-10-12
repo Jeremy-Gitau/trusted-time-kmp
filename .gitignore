@@ -9,7 +9,7 @@ captures/
 *.keystore
 *.jks
 
-# Publishing secrets — NEVER commit these
+# Publishing secrets
 gradle.properties.local
 secring.gpg
 

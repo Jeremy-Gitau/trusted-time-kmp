@@ -3,52 +3,29 @@ package com.trustedtime
 import kotlin.time.Clock
 import kotlin.time.Instant
 
-/**
- * The source of the time returned by [TrustedTimeClock].
- *
- * [TRUSTED]  — time was fetched from a remote NTP / trusted service and is tamper-proof.
- * [SYSTEM_FALLBACK] — remote sync failed; device system clock was used instead.
- */
+/** Where the time returned by [TrustedTimeClock.now] comes from. */
 enum class TimeSource {
+    /** The platform's trusted source; changing the device clock doesn't affect it. */
     TRUSTED,
+
+    /** The device clock: not synced yet, or no trusted signal available. */
     SYSTEM_FALLBACK,
 }
 
 /**
- * Cross-platform tamper-proof clock. It is a [Clock], so it can be used anywhere a [Clock] is
- * expected, e.g. in place of [Clock.System].
- *
- * Usage:
- * ```
- * val clock = TrustedTimeClock()
- * clock.sync()                   // call once, e.g. at app start
- *
- * val now: Instant = clock.now()
- * val source: TimeSource = clock.timeSource()
- * val synced: Boolean = clock.isTimeSynced()
- * ```
+ * A clock that can't be changed from the device settings. Call [sync] once, then use it anywhere
+ * a [Clock] is expected, e.g. in place of [Clock.System].
  */
 expect class TrustedTimeClock() : Clock {
-    /**
-     * Returns the current [Instant].
-     * Always returns a value — falls back to system clock if not yet synced.
-     */
+    /** The trusted time, or the device clock if [timeSource] is [TimeSource.SYSTEM_FALLBACK]. */
     override fun now(): Instant
 
-    /**
-     * Suspends until a trusted time sync is complete.
-     * Call this once at app/SDK initialization.
-     */
+    /** Fetches the trusted time. On failure, keeps the previous sync, if any. */
     suspend fun sync()
 
-    /**
-     * Returns true if a successful trusted sync has been performed.
-     */
+    /** Whether a sync has ever succeeded. */
     fun isTimeSynced(): Boolean
 
-    /**
-     * Returns the [TimeSource] that [now] would use if called right now.
-     * Safe to call before [now]; does not depend on earlier calls.
-     */
+    /** The [TimeSource] that [now] would use right now. */
     fun timeSource(): TimeSource
 }

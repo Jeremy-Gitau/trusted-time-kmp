@@ -8,7 +8,6 @@ plugins {
 }
 
 kotlin {
-    // Android
     android {
         namespace = "com.trustedtime"
         compileSdk =
@@ -22,12 +21,10 @@ kotlin {
         withHostTestBuilder {} // run commonTest on the JVM for Android too
     }
 
-    // iOS (the framework is what Swift apps, like sample-ios, link against)
     listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach {
         it.binaries.framework { baseName = "TrustedTime" }
     }
 
-    // JVM
     jvm()
 
     sourceSets {
@@ -51,8 +48,6 @@ kotlin {
         jvmTest.dependencies {
             implementation(libs.kotlinx.datetime) // only to test use as a Clock (todayIn)
         }
-
-        // iOS has no extra dependencies (uses platform APIs)
     }
 }
 
@@ -61,7 +56,6 @@ tasks.withType<KotlinJvmCompile>().configureEach {
     compilerOptions.jvmTarget.set(JvmTarget.JVM_1_8)
 }
 
-// ─── Maven Central Publishing ───────────────────────────────────────────────
 mavenPublishing {
     publishToMavenCentral()
     signAllPublications()

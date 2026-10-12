@@ -10,7 +10,7 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 /**
- * JVM actual — fetches time from an NTP server using Apache Commons Net.
+ * Fetches time from an NTP server using Apache Commons Net.
  *
  * After sync, time is advanced with [System.nanoTime], a monotonic counter
  * that is unaffected by changes to the system clock, so subsequent [now]

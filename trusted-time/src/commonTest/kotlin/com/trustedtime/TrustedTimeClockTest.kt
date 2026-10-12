@@ -34,7 +34,6 @@ class TrustedTimeClockTest {
         val clock = TrustedTimeClock()
         val now = clock.now()
         val systemNow = Clock.System.now()
-        // Should be within 1 minute of system time (even on fallback)
         val diffMs =
             kotlin.math.abs(
                 now.toEpochMilliseconds() - systemNow.toEpochMilliseconds(),

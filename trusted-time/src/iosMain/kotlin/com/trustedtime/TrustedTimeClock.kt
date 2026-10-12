@@ -21,7 +21,7 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 /**
- * iOS actual — reads the "Date" header of an HTTPS response from
+ * Reads the "Date" header of an HTTPS response from
  * www.apple.com as the trusted time.
  *
  * After sync, time is advanced with CLOCK_MONOTONIC_RAW, a counter that is
