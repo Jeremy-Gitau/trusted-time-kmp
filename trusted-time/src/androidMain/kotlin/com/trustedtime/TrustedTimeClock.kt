@@ -6,11 +6,11 @@ import com.google.android.gms.tasks.Task
 import com.google.android.gms.time.TrustedTime
 import com.google.android.gms.time.TrustedTimeClient
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * Android actual — backed by Google Play Services TrustedTime API.

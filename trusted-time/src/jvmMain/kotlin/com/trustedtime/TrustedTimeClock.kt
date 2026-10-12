@@ -2,12 +2,12 @@ package com.trustedtime
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import org.apache.commons.net.ntp.NTPUDPClient
 import java.net.InetAddress
 import java.time.Duration
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * JVM actual — fetches time from an NTP server using Apache Commons Net.

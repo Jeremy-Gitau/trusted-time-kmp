@@ -88,8 +88,9 @@ Before a successful sync, or when no trusted time is available, `now()` falls ba
 clock and `timeSource()` returns `SYSTEM_FALLBACK`. Always check the source before relying on the
 time for anything security-sensitive.
 
-`TrustedTimeClock` is a `kotlinx.datetime.Clock`, so you can pass it anywhere a `Clock` is expected,
-e.g. in place of `Clock.System`:
+`TrustedTimeClock` is a `kotlin.time.Clock`, so you can pass it anywhere a `Clock` is expected,
+e.g. in place of `Clock.System`. With [kotlinx-datetime](https://github.com/Kotlin/kotlinx-datetime)
+0.7 or later:
 
 ```kotlin
 val today: LocalDate = clock.todayIn(TimeZone.currentSystemDefault())
@@ -135,7 +136,8 @@ enum class TimeSource {
 }
 ```
 
-`Clock` and `Instant` are from `kotlinx.datetime`.
+`Clock` and `Instant` are from `kotlin.time` (Kotlin's standard library), so the library adds no
+date-time dependency to your app.
 
 ---
 

@@ -3,7 +3,7 @@ package com.trustedtime.sample.jvm
 import com.trustedtime.TrustedTimeClock
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 
 /**

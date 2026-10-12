@@ -3,8 +3,6 @@ package com.trustedtime
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.convert
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSHTTPURLResponse
 import platform.Foundation.NSLocale
@@ -19,6 +17,8 @@ import platform.posix.clock_gettime_nsec_np
 import kotlin.concurrent.Volatile
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * iOS actual — reads the "Date" header of an HTTPS response from

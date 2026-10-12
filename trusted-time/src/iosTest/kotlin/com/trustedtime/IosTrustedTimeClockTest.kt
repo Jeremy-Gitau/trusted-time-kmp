@@ -1,11 +1,11 @@
 package com.trustedtime
 
 import kotlinx.coroutines.runBlocking
-import kotlinx.datetime.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 class IosTrustedTimeClockTest {
     private var fakeMonotonicNanos = 0L

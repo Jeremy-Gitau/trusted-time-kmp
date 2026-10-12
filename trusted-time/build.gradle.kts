@@ -24,7 +24,6 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            api(libs.kotlinx.datetime) // Instant is part of the public API
             implementation(libs.kotlinx.coroutines.core)
         }
 
@@ -39,6 +38,10 @@ kotlin {
 
         jvmMain.dependencies {
             implementation(libs.apache.commons.net)
+        }
+
+        jvmTest.dependencies {
+            implementation(libs.kotlinx.datetime) // only to test use as a Clock (todayIn)
         }
 
         // iOS has no extra dependencies (uses platform APIs)
