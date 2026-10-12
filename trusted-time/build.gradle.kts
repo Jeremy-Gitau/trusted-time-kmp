@@ -27,12 +27,6 @@ kotlin {
         }
     }
 
-    // JS
-    js(IR) {
-        browser()
-        nodejs()
-    }
-
     sourceSets {
         commonMain.dependencies {
             api(libs.kotlinx.datetime) // Instant is part of the public API
@@ -52,7 +46,7 @@ kotlin {
             implementation(libs.apache.commons.net)
         }
 
-        // iOS and JS have no extra dependencies (use platform APIs)
+        // iOS has no extra dependencies (uses platform APIs)
     }
 }
 
@@ -83,7 +77,7 @@ mavenPublishing {
 
     pom {
         name.set("Trusted Time KMP")
-        description.set("A Kotlin Multiplatform SDK for tamper-proof time across Android, iOS, JVM and JS")
+        description.set("A Kotlin Multiplatform SDK for tamper-proof time across Android, iOS and JVM")
         url.set("https://github.com/Jeremy-Gitau/trusted-time-kmp")
 
         licenses {

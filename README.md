@@ -4,20 +4,19 @@ A **Kotlin Multiplatform** library that gives your app a clock users can't fake 
 device time. It syncs once with a trusted network source, then keeps time locally, so `now()` is
 cheap and works offline.
 
-> ⚠️ **Work in progress — not production-ready yet.** Android uses Google's TrustedTime API and is
-> the most complete target. The iOS and JS targets still have known gaps (see
-> [Known limitations](#known-limitations)). Not yet published to Maven Central.
+> ⚠️ **Work in progress — not production-ready yet.** Sync has been tested on Android, iOS (simulator
+> only) and JVM, but there are still [known limitations](#known-limitations). Not yet published to
+> Maven Central.
 
 ---
 
 ## Platform support
 
-| Platform | Trusted time source                           | Status                  |
-|----------|-----------------------------------------------|-------------------------|
-| Android  | Google Play Services TrustedTime API          | ✅ Tested on a device   |
-| JVM      | NTP via Apache Commons Net (`pool.ntp.org`)   | ✅ Builds, unit tested  |
-| iOS      | HTTP `Date` header + monotonic clock          | ✅ Tested on a simulator |
-| JS       | HTTP `Date` header via `fetch`                | 🚧 Builds, sync untested |
+| Platform | Trusted time source                                | Status                   |
+|----------|----------------------------------------------------|--------------------------|
+| Android  | Google Play Services TrustedTime API               | ✅ Tested on a device    |
+| JVM      | NTP via Apache Commons Net (`pool.ntp.org`)        | ✅ Tested on macOS       |
+| iOS      | HTTPS `Date` header from `www.apple.com`           | ✅ Tested on a simulator |
 
 ---
 
@@ -89,6 +88,28 @@ Before a successful sync, or when no trusted time is available, `now()` falls ba
 clock and `timeSource()` returns `SYSTEM_FALLBACK`. Always check the source before relying on the
 time for anything security-sensitive.
 
+### From Swift (iOS)
+
+The library is exposed to Swift as the `TrustedTime` framework. `sync()` becomes an `async`
+function; call it from the main thread (e.g. a SwiftUI view or a `@MainActor` task).
+
+```swift
+import TrustedTime
+
+let clock = TrustedTimeClock()
+
+Task { @MainActor in
+    try? await clock.sync()
+}
+
+let nowMs: Int64 = clock.now().toEpochMilliseconds()
+if clock.timeSource() == .trusted {
+    // safe to use
+}
+```
+
+See `sample-ios/` for a complete app.
+
 ---
 
 ## API reference
@@ -115,9 +136,7 @@ enum class TimeSource {
 
 These are tracked and will be fixed before a 1.0 release:
 
-- **JS:** browsers hide the `Date` header on cross-origin requests, and `window` doesn't exist in
-  Node.js, so sync is likely to fail on both.
-- **iOS / JS:** the HTTP `Date` header only has 1-second precision and network delay isn't
+- **iOS:** the HTTP `Date` header only has 1-second precision and network delay isn't
   compensated, so expect up to ~1 s of error. Fine for detecting a changed clock, not for precise
   timing.
 - `TrustedTimeClock` does not implement `kotlinx.datetime.Clock` yet.
@@ -132,6 +151,8 @@ The project uses the Gradle wrapper (Gradle 8.14.5) and JDK 17. You don't need G
 ./gradlew :trusted-time:compileKotlinJvm               # JVM
 ./gradlew :trusted-time:compileDebugKotlinAndroid      # Android
 ./gradlew :trusted-time:jvmTest                        # run tests on the JVM
+./gradlew :trusted-time:iosSimulatorArm64Test          # run tests on the iOS simulator
+./ktlint.sh                                            # format, then check code style
 ```
 
 iOS targets require macOS with Xcode installed.
@@ -162,8 +183,9 @@ trusted-time-kmp/
 │       ├── commonTest/        ← shared tests
 │       ├── androidMain/       ← Google TrustedTime implementation
 │       ├── jvmMain/           ← NTP implementation
-│       ├── iosMain/           ← HTTP Date header implementation
-│       └── jsMain/            ← fetch implementation
+│       ├── jvmTest/           ← JVM tests
+│       ├── iosMain/           ← HTTPS Date header implementation
+│       └── iosTest/           ← iOS tests
 ├── sample-app/                ← Android demo app
 ├── sample-jvm/                ← command-line JVM demo
 ├── sample-ios/                ← SwiftUI demo app (Xcode project)
