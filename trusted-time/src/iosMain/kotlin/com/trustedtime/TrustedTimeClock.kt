@@ -78,6 +78,7 @@ actual class TrustedTimeClock internal constructor(
 
     actual suspend fun sync() {
         try {
+            openConnection() ?: return
             val startNanos = monotonicNanos()
             val dateHeaderMs = fetchServerTimeMs() ?: return
             val receivedNanos = monotonicNanos()
@@ -90,6 +91,8 @@ actual class TrustedTimeClock internal constructor(
         } catch (e: Exception) {
         }
     }
+
+    private suspend fun openConnection() = fetchServerTimeMs()
 
     actual fun isTimeSynced(): Boolean = state != null
 

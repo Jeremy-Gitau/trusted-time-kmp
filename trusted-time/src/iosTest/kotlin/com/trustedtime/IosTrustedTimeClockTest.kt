@@ -101,6 +101,22 @@ class IosTrustedTimeClockTest {
         }
 
     @Test
+    fun connectionSetupIsNotCountedAsRoundTrip() =
+        runBlocking {
+            var requests = 0
+            fakeServer = {
+                requests++
+                fakeMonotonicNanos += if (requests == 1) 2_000_000_000L else 200_000_000L // cold, then warm
+                dateHeaderMs
+            }
+
+            clock.sync()
+
+            assertEquals(2, requests)
+            assertEquals(dateHeaderMs + 500 + 100, clock.now().toEpochMilliseconds())
+        }
+
+    @Test
     fun dateHeaderTimeAddsHalfASecondAndHalfTheRoundTrip() {
         assertEquals(1_650L, dateHeaderTimeAtReceiptMs(dateHeaderMs = 1_000, roundTripMs = 300))
     }
