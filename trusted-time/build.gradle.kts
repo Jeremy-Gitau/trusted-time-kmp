@@ -18,7 +18,7 @@ kotlin {
             libs.versions.androidMinSdk
                 .get()
                 .toInt()
-        withHostTestBuilder {} // run commonTest on the JVM for Android too
+        withHostTestBuilder {}
     }
 
     listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach {
@@ -46,12 +46,11 @@ kotlin {
         }
 
         jvmTest.dependencies {
-            implementation(libs.kotlinx.datetime) // only to test use as a Clock (todayIn)
+            implementation(libs.kotlinx.datetime)
         }
     }
 }
 
-// Android and JVM bytecode: Java 8, so the library runs on as many JVMs as possible
 tasks.withType<KotlinJvmCompile>().configureEach {
     compilerOptions.jvmTarget.set(JvmTarget.JVM_1_8)
 }

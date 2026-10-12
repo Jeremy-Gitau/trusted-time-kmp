@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    alias(libs.plugins.android.application) // AGP 9 compiles Kotlin itself
+    alias(libs.plugins.android.application)
 }
 
 android {
@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "com.trustedtime.sample"
-        minSdk = 23 // appcompat 1.8 requires 23; the library itself supports 21
+        minSdk = 23
         targetSdk =
             libs.versions.androidTargetSdk
                 .get()
