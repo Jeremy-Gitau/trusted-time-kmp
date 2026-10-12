@@ -126,4 +126,19 @@ class JvmTrustedTimeClockTest {
             assertFalse(ranAfterSync)
             assertFalse(clock.isTimeSynced())
         }
+
+    @Test
+    fun ntpTimeAddsOneWayNetworkDelay() {
+        // 100 ms round trip, of which the server spent 20 ms: 40 ms each way
+        val serverReceiveMs = 1_700_000_000_000L
+        val serverTransmitMs = serverReceiveMs + 20
+
+        assertEquals(serverTransmitMs + 40, ntpTimeAtReceiptMs(serverReceiveMs, serverTransmitMs, roundTripMs = 100))
+    }
+
+    @Test
+    fun ntpDelayIsNeverNegative() {
+        // Server claims more processing time than the whole round trip (bad server timestamps)
+        assertEquals(1_000L, ntpTimeAtReceiptMs(serverReceiveMs = 0, serverTransmitMs = 1_000, roundTripMs = 50))
+    }
 }

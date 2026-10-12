@@ -66,14 +66,31 @@ private val NTP_TIMEOUT: Duration = Duration.ofSeconds(5)
 
 private suspend fun queryNtpServer(): Long =
     withContext(Dispatchers.IO) {
+        val server = InetAddress.getByName(NTP_HOST) // resolve DNS before timing the round trip
         val client = NTPUDPClient()
         try {
             client.setDefaultTimeout(NTP_TIMEOUT)
             client.open()
-            client
-                .getTime(InetAddress.getByName(NTP_HOST))
-                .message.transmitTimeStamp.time
+            val startNanos = System.nanoTime()
+            val message = client.getTime(server).message
+            val roundTripMs = (System.nanoTime() - startNanos) / 1_000_000
+            ntpTimeAtReceiptMs(message.receiveTimeStamp.time, message.transmitTimeStamp.time, roundTripMs)
         } finally {
             client.close()
         }
     }
+
+/**
+ * The server's time at the moment its reply reached us: the time it sent the reply plus the
+ * one-way trip back, estimated as half the round trip minus the time the server spent on it.
+ * Only differences are used, so the local wall clock (which can be wrong or changed) isn't.
+ */
+internal fun ntpTimeAtReceiptMs(
+    serverReceiveMs: Long,
+    serverTransmitMs: Long,
+    roundTripMs: Long,
+): Long {
+    val serverProcessingMs = serverTransmitMs - serverReceiveMs
+    val oneWayMs = ((roundTripMs - serverProcessingMs) / 2).coerceAtLeast(0)
+    return serverTransmitMs + oneWayMs
+}
