@@ -8,6 +8,7 @@ import platform.Foundation.NSHTTPURLResponse
 import platform.Foundation.NSLocale
 import platform.Foundation.NSMutableURLRequest
 import platform.Foundation.NSURL
+import platform.Foundation.NSURLRequestReloadIgnoringLocalCacheData
 import platform.Foundation.NSURLSession
 import platform.Foundation.dataTaskWithRequest
 import platform.Foundation.setHTTPMethod
@@ -51,8 +52,11 @@ actual class TrustedTimeClock internal constructor(
 
     actual suspend fun sync() {
         try {
-            val serverMs = fetchServerTimeMs() ?: return
-            state = SyncState(serverMs, monotonicNanos())
+            val startNanos = monotonicNanos()
+            val dateHeaderMs = fetchServerTimeMs() ?: return
+            val receivedNanos = monotonicNanos()
+            val roundTripMs = (receivedNanos - startNanos) / 1_000_000
+            state = SyncState(dateHeaderTimeAtReceiptMs(dateHeaderMs, roundTripMs), receivedNanos)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -69,6 +73,16 @@ actual class TrustedTimeClock internal constructor(
 private fun continuousMonotonicNanos(): Long = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW.convert()).toLong()
 
 /**
+ * The server's time when its reply reached us. The Date header is cut down to the whole second, so
+ * the server's real time was on average half a second later, plus the one-way trip back, estimated
+ * as half the round trip.
+ */
+internal fun dateHeaderTimeAtReceiptMs(
+    dateHeaderMs: Long,
+    roundTripMs: Long,
+): Long = dateHeaderMs + 500 + roundTripMs / 2
+
+/**
  * HEAD request to www.apple.com; returns its "Date" header (UTC) in epoch
  * milliseconds, or null if missing. Cancelling the coroutine cancels the request.
  */
@@ -79,6 +93,7 @@ private suspend fun fetchServerDateMs(): Long? =
             NSMutableURLRequest.requestWithURL(url).apply {
                 setHTTPMethod("HEAD")
                 setTimeoutInterval(5.0)
+                setCachePolicy(NSURLRequestReloadIgnoringLocalCacheData)
             }
         val task =
             NSURLSession.sharedSession.dataTaskWithRequest(request) { _, response, _ ->
