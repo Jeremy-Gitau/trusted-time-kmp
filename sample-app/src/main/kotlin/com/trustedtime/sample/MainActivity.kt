@@ -53,7 +53,6 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-/** For example "System clock is 2 days, 8 seconds behind". */
 private fun describeOffset(
     trusted: Instant,
     system: Instant,

@@ -53,7 +53,6 @@ private let isoFormatter: ISO8601DateFormatter = {
     return formatter
 }()
 
-/// For example "System clock is 2 days, 8 seconds behind". offsetMs is trusted minus system time.
 private func describeOffset(_ offsetMs: Int64) -> String {
     let size = abs(offsetMs)
     if size < 1000 { return "System clock is correct (within \(size) ms)" }

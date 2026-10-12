@@ -32,11 +32,6 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
-/**
- * Shows the trusted time next to the system clock, updated live. Move your computer's clock back:
- * the system time jumps, the trusted time does not. Moving it forward switches the source to
- * SYSTEM_FALLBACK until the next sync.
- */
 fun main() =
     application {
         Window(
@@ -98,7 +93,6 @@ private fun SampleScreen() {
     }
 }
 
-/** For example "System clock is 2 days, 8 seconds behind". */
 private fun describeOffset(
     trusted: Instant,
     system: Instant,
