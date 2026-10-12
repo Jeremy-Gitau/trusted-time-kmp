@@ -29,15 +29,13 @@ kotlin {
 }
 ```
 
-The library is not on Maven Central yet. Until it is, include the `trusted-time` module from this
-repository:
+The library is on [Maven Central](https://central.sonatype.com/artifact/io.github.jeremy-gitau/trusted-time-kmp).
+Android-only and JVM-only projects can add the same dependency to their `dependencies` block:
 
 ```kotlin
-// settings.gradle.kts
-include(":trusted-time")
-
-// build.gradle.kts
-implementation(project(":trusted-time"))
+dependencies {
+    implementation("io.github.jeremy-gitau:trusted-time-kmp:0.1.0")
+}
 ```
 
 ## Usage
