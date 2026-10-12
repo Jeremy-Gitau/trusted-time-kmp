@@ -23,7 +23,7 @@ keeps working offline.
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.jeremy-gitau:trusted-time-kmp:1.0.0")
+            implementation("io.github.jeremy-gitau:trusted-time-kmp:0.1.0")
         }
     }
 }
