@@ -5,7 +5,6 @@ struct ContentView: View {
     private let clock = TrustedTimeClock()
 
     @State private var status = "Not synced"
-    @State private var time = "Press 'Get Time' to read the clock"
 
     var body: some View {
         VStack(spacing: 24) {
@@ -14,32 +13,45 @@ struct ContentView: View {
 
             Text(status)
 
-            Text(time)
-                .font(.body.monospaced())
-                .multilineTextAlignment(.center)
-
             Button("Sync") {
                 Task {
                     status = "Syncing..."
                     try? await clock.sync()
-                    status = clock.isTimeSynced()
-                        ? "✅ Synced — source: \(clock.timeSource())"
-                        : "⚠️ Sync failed — using system clock"
+                    status = clock.isTimeSynced() ? "✅ Synced" : "⚠️ Sync failed — using system clock"
                 }
             }
             .buttonStyle(.borderedProminent)
 
-            Button("Get Time") {
-                let now = clock.now()
-                let label = clock.timeSource() == .trusted ? "🔒 Trusted" : "⚠️ System Fallback"
-                let offsetMs = now.toEpochMilliseconds() - Int64(Date().timeIntervalSince1970 * 1000)
-                time = "\(label)\n\(now)\n\(describeOffset(offsetMs))"
+            TimelineView(.periodic(from: .now, by: 0.5)) { _ in
+                let trusted = clock.now()
+                let system = Date()
+                let offsetMs = trusted.toEpochMilliseconds() - Int64(system.timeIntervalSince1970 * 1000)
+
+                VStack(spacing: 16) {
+                    Text(clock.timeSource() == .trusted ? "🔒 Trusted" : "⚠️ System Fallback")
+                    Text("Trusted: \(trusted)")
+                        .font(.footnote.monospaced())
+                    Text("System:  \(isoFormatter.string(from: system))")
+                        .font(.footnote.monospaced())
+                    Text(describeOffset(offsetMs))
+                        .multilineTextAlignment(.center)
+                }
             }
-            .buttonStyle(.bordered)
         }
         .padding()
+        .onAppear {
+            if clock.isTimeSynced() {
+                status = "✅ Synced (restored)"
+            }
+        }
     }
 }
+
+private let isoFormatter: ISO8601DateFormatter = {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return formatter
+}()
 
 /// For example "System clock is 2 days, 8 seconds behind". offsetMs is trusted minus system time.
 private func describeOffset(_ offsetMs: Int64) -> String {
