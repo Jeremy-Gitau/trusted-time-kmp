@@ -35,10 +35,6 @@ actual class TrustedTimeClock internal constructor(
 ) : Clock {
     actual constructor() : this(::continuousMonotonicNanos, Clock.System::now, ::fetchServerDateMs)
 
-    /**
-     * Everything recorded at sync, replaced as a single object so a thread
-     * calling [now] never sees a half-updated state.
-     */
     private class SyncState(
         val trustedEpochMs: Long,
         val monotonicAtSyncNanos: Long,
@@ -60,7 +56,6 @@ actual class TrustedTimeClock internal constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            // Keep the previous sync, if any: it is still valid.
         }
     }
 
@@ -87,7 +82,6 @@ private suspend fun fetchServerDateMs(): Long? =
             }
         val task =
             NSURLSession.sharedSession.dataTaskWithRequest(request) { _, response, _ ->
-                // Case-insensitive: HTTP/2 servers send the header as "date"
                 val dateStr = (response as? NSHTTPURLResponse)?.valueForHTTPHeaderField("Date")
                 val formatter =
                     NSDateFormatter().apply {

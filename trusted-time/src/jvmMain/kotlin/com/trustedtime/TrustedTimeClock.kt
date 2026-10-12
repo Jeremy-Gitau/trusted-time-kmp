@@ -23,10 +23,6 @@ actual class TrustedTimeClock internal constructor(
 ) : Clock {
     actual constructor() : this(System::nanoTime, Clock.System::now, ::queryNtpServer)
 
-    /**
-     * Everything recorded at sync, replaced as a single object so a thread
-     * calling [now] never sees a half-updated state.
-     */
     private class SyncState(
         val trustedEpochMs: Long,
         val monotonicAtSyncNanos: Long,
@@ -47,11 +43,9 @@ actual class TrustedTimeClock internal constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            // Keep the previous sync, if any: it is still valid.
         }
     }
 
-    /** Records [ntpTimeMs] as the trusted time at this instant. */
     internal fun applySync(ntpTimeMs: Long) {
         state = SyncState(ntpTimeMs, monotonicNanos())
     }
@@ -66,7 +60,7 @@ private val NTP_TIMEOUT: Duration = Duration.ofSeconds(5)
 
 private suspend fun queryNtpServer(): Long =
     withContext(Dispatchers.IO) {
-        val server = InetAddress.getByName(NTP_HOST) // resolve DNS before timing the round trip
+        val server = InetAddress.getByName(NTP_HOST)
         val client = NTPUDPClient()
         try {
             client.setDefaultTimeout(NTP_TIMEOUT)

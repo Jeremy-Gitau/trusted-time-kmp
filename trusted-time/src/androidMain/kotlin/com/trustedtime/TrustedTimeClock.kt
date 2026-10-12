@@ -29,7 +29,6 @@ actual class TrustedTimeClock actual constructor() : Clock {
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            // Keep the previous client, if any: it is still valid.
         }
     }
 
@@ -67,7 +66,7 @@ private suspend fun <T> Task<T>.awaitResult(): T =
  * ```
  */
 object TrustedTimeInitializer {
-    @SuppressLint("StaticFieldLeak") // application context is safe
+    @SuppressLint("StaticFieldLeak")
     internal var appContext: Context? = null
 
     fun init(context: Context) {
