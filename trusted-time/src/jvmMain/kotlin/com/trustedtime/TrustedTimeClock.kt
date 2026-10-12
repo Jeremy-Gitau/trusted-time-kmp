@@ -10,7 +10,8 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 /**
- * Fetches time from an NTP server using Apache Commons Net.
+ * Fetches time from an NTP server using Apache Commons Net, or from an HTTPS
+ * Date header where NTP is blocked.
  *
  * After sync, time is advanced with [System.nanoTime], a monotonic counter
  * that is unaffected by changes to the system clock, so subsequent [now]
@@ -23,9 +24,13 @@ import kotlin.time.Instant
 actual class TrustedTimeClock internal constructor(
     private val monotonicNanos: () -> Long,
     private val systemNow: () -> Instant,
-    private val fetchNtpTimeMs: suspend () -> Long,
+    private val fetchTimeMs: suspend () -> Long,
 ) : Clock {
-    actual constructor() : this(System::nanoTime, Clock.System::now, ::queryNtpServer)
+    actual constructor() : this(
+        System::nanoTime,
+        Clock.System::now,
+        { withFallback(::queryNtpServer, ::fetchHttpsDateTimeMs) },
+    )
 
     private class SyncState(
         val trustedEpochMs: Long,
@@ -40,7 +45,7 @@ actual class TrustedTimeClock internal constructor(
 
     actual suspend fun sync() {
         try {
-            applySync(fetchNtpTimeMs())
+            applySync(fetchTimeMs())
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

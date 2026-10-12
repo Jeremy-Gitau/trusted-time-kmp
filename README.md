@@ -10,11 +10,14 @@ keeps working offline.
 
 ## Platforms
 
-| Platform | Trusted source                         | Minimum       |
-|----------|----------------------------------------|---------------|
-| Android  | Google Play services TrustedTime API   | API 21        |
-| iOS      | HTTPS `Date` header from `www.apple.com` | iOS 15      |
-| JVM      | NTP (`pool.ntp.org`)                   | Java 8        |
+| Platform | Trusted source                                                   | Minimum |
+|----------|------------------------------------------------------------------|---------|
+| Android  | Google Play services TrustedTime API, or HTTPS `Date` without it | API 21  |
+| iOS      | HTTPS `Date` header from `www.apple.com`                         | iOS 15  |
+| JVM      | NTP (`pool.ntp.org`), or HTTPS `Date` where NTP is blocked       | Java 8  |
+
+Where a platform's main source isn't available, the clock falls back to the `Date` header of an
+HTTPS response from `www.apple.com`.
 
 ## Installation
 
@@ -23,7 +26,7 @@ keeps working offline.
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.jeremy-gitau:trusted-time-kmp:0.1.0")
+            implementation("io.github.jeremy-gitau:trusted-time-kmp:0.2.0")
         }
     }
 }
@@ -34,7 +37,7 @@ Android-only and JVM-only projects can add the same dependency to their `depende
 
 ```kotlin
 dependencies {
-    implementation("io.github.jeremy-gitau:trusted-time-kmp:0.1.0")
+    implementation("io.github.jeremy-gitau:trusted-time-kmp:0.2.0")
 }
 ```
 
@@ -79,7 +82,12 @@ the device clock if it has never synced. Cancelling the coroutine cancels the sy
 
 `now()` always returns a value. Before a successful sync it returns the device time, and
 `timeSource()` reports `SYSTEM_FALLBACK`. Check `timeSource()` before using the time for anything
-security-sensitive.
+security-sensitive, and call `sync()` again when it reports `SYSTEM_FALLBACK`, for example when the
+app returns to the foreground.
+
+On iOS the sync is saved, so it survives an app restart until the device reboots. On Android, Play
+services keeps its own trusted time across restarts. On the JVM, call `sync()` each time the app
+starts.
 
 ### Use as a `kotlin.time.Clock`
 
@@ -134,10 +142,14 @@ date-time dependency.
 ## Accuracy
 
 - **Android:** provided by Google Play services. Right after a reboot, Play services may have no
-  trusted signal yet. `timeSource()` then reports `SYSTEM_FALLBACK` until it does.
+  trusted signal yet, so `sync()` uses the HTTPS fallback until it does.
 - **JVM:** NTP with network delay compensation, typically within a few milliseconds of the server.
-- **iOS:** the HTTP `Date` header has 1-second precision, so the time can be up to about a second
-  off. That is enough to detect a changed clock, but not for precise timing.
+  The JVM's monotonic counter pauses while the computer sleeps on macOS and Linux. A sleep looks
+  the same as the clock being moved forward, so either one makes `timeSource()` report
+  `SYSTEM_FALLBACK` until the next `sync()`. Moving the clock back has no effect.
+- **HTTPS `Date` (iOS, and the fallback elsewhere):** the header has 1-second precision. With
+  network delay compensation, the time is within about half a second. That is enough to detect a
+  changed clock, but not for precise timing.
 
 ## Samples
 
@@ -147,8 +159,9 @@ date-time dependency.
 | `sample-jvm`  | `./gradlew :sample-jvm:run`            |
 | `sample-ios`  | `open sample-ios/SampleIos.xcodeproj`  |
 
-The JVM sample prints the trusted time next to the system time once a second for a minute. Changing
-the computer's clock while it runs moves the system time but not the trusted time.
+The JVM sample prints the trusted time next to the system time once a second for a minute. Moving
+the computer's clock back while it runs moves the system time but not the trusted time. Moving it
+forward switches the source to `SYSTEM_FALLBACK`.
 
 ## Building
 

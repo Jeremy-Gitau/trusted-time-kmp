@@ -8,6 +8,8 @@ plugins {
 }
 
 kotlin {
+    applyDefaultHierarchyTemplate()
+
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
@@ -36,6 +38,10 @@ kotlin {
     jvm()
 
     sourceSets {
+        val jvmAndAndroidMain by creating { dependsOn(commonMain.get()) }
+        jvmMain.get().dependsOn(jvmAndAndroidMain)
+        androidMain.get().dependsOn(jvmAndAndroidMain)
+
         commonMain.dependencies {
             implementation(libs.kotlinx.coroutines.core)
         }
@@ -70,7 +76,7 @@ mavenPublishing {
     coordinates(
         groupId = "io.github.jeremy-gitau",
         artifactId = "trusted-time-kmp",
-        version = "0.1.0",
+        version = "0.2.0",
     )
 
     pom {

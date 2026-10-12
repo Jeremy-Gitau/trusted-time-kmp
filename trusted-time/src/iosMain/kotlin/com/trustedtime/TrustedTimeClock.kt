@@ -124,22 +124,12 @@ internal fun bootSessionId(): String? =
 private fun continuousMonotonicNanos(): Long = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW.convert()).toLong()
 
 /**
- * The server's time when its reply reached us. The Date header is cut down to the whole second, so
- * the server's real time was on average half a second later, plus the one-way trip back, estimated
- * as half the round trip.
- */
-internal fun dateHeaderTimeAtReceiptMs(
-    dateHeaderMs: Long,
-    roundTripMs: Long,
-): Long = dateHeaderMs + 500 + roundTripMs / 2
-
-/**
  * HEAD request to www.apple.com; returns its "Date" header (UTC) in epoch
  * milliseconds, or null if missing. Cancelling the coroutine cancels the request.
  */
 private suspend fun fetchServerDateMs(): Long? =
     suspendCancellableCoroutine { cont ->
-        val url = NSURL.URLWithString("https://www.apple.com")!!
+        val url = NSURL.URLWithString(HTTPS_TIME_URL)!!
         val request =
             NSMutableURLRequest.requestWithURL(url).apply {
                 setHTTPMethod("HEAD")

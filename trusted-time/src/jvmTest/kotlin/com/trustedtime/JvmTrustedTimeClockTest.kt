@@ -5,6 +5,7 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
@@ -25,7 +26,7 @@ class JvmTrustedTimeClockTest {
         TrustedTimeClock(
             monotonicNanos = { fakeMonotonicNanos },
             systemNow = { fakeSystemTime },
-            fetchNtpTimeMs = { fakeNtp() },
+            fetchTimeMs = { fakeNtp() },
         )
 
     @Test
@@ -184,4 +185,32 @@ class JvmTrustedTimeClockTest {
         // Server claims more processing time than the whole round trip (bad server timestamps)
         assertEquals(1_000L, ntpTimeAtReceiptMs(serverReceiveMs = 0, serverTransmitMs = 1_000, roundTripMs = 50))
     }
+
+    @Test
+    fun fallbackIsUsedWhenPrimaryFails() =
+        runBlocking {
+            val time = withFallback(primary = { throw IOException("UDP 123 blocked") }, fallback = { 42L })
+            assertEquals(42L, time)
+        }
+
+    @Test
+    fun fallbackIsNotUsedWhenPrimaryWorks() =
+        runBlocking {
+            val time = withFallback(primary = { 1L }, fallback = { error("should not be called") })
+            assertEquals(1L, time)
+        }
+
+    @Test
+    fun cancellationIsNotTreatedAsAFailure() =
+        runBlocking {
+            var fallbackCalled = false
+            val job =
+                launch {
+                    withFallback(primary = { awaitCancellation() }, fallback = { fallbackCalled = true })
+                }
+            yield()
+            job.cancelAndJoin()
+
+            assertFalse(fallbackCalled)
+        }
 }
