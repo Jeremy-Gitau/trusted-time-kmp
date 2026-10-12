@@ -16,7 +16,7 @@ cheap and works offline.
 |----------|-----------------------------------------------|-------------------------|
 | Android  | Google Play Services TrustedTime API          | ✅ Tested on a device   |
 | JVM      | NTP via Apache Commons Net (`pool.ntp.org`)   | ✅ Builds, unit tested  |
-| iOS      | HTTP `Date` header + device uptime            | 🚧 Builds, sync untested |
+| iOS      | HTTP `Date` header + monotonic clock          | 🚧 Unit tested, sync untested |
 | JS       | HTTP `Date` header via `fetch`                | 🚧 Builds, sync untested |
 
 ---
@@ -115,8 +115,6 @@ enum class TimeSource {
 
 These are tracked and will be fixed before a 1.0 release:
 
-- **iOS:** elapsed time uses device uptime, which may pause while the device sleeps, so the clock
-  can fall behind.
 - **JS:** browsers hide the `Date` header on cross-origin requests, and `window` doesn't exist in
   Node.js, so sync is likely to fail on both.
 - **iOS / JS:** the HTTP `Date` header only has 1-second precision and network delay isn't

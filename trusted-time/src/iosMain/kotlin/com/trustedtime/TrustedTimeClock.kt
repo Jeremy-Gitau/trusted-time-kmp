@@ -1,5 +1,7 @@
 package com.trustedtime
 
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.convert
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
@@ -7,45 +9,54 @@ import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSHTTPURLResponse
 import platform.Foundation.NSLocale
 import platform.Foundation.NSMutableURLRequest
-import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLSession
 import platform.Foundation.dataTaskWithRequest
 import platform.Foundation.setHTTPMethod
 import platform.Foundation.timeIntervalSince1970
+import platform.posix.CLOCK_MONOTONIC_RAW
+import platform.posix.clock_gettime_nsec_np
 import kotlin.concurrent.Volatile
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
 
 /**
- * iOS actual — fetches time from NTP using NSURLSession HTTP time headers
- * as a lightweight trusted source. For production you can swap in a
- * full NTP socket implementation or a Swift TrueTime bridge.
+ * iOS actual — reads the "Date" header of an HTTPS response from
+ * time.cloudflare.com as the trusted time.
+ *
+ * After sync, time is advanced with CLOCK_MONOTONIC_RAW, a counter that is
+ * unaffected by changes to the system clock and keeps running while the
+ * device sleeps.
  */
-actual class TrustedTimeClock actual constructor() {
+actual class TrustedTimeClock internal constructor(
+    private val monotonicNanos: () -> Long,
+    private val systemNow: () -> Instant,
+    private val fetchServerTimeMs: suspend () -> Long?,
+) {
+    actual constructor() : this(::continuousMonotonicNanos, Clock.System::now, ::fetchServerDateMs)
+
     /**
      * Everything recorded at sync, replaced as a single object so a thread
      * calling [now] never sees a half-updated state.
      */
     private class SyncState(
         val trustedEpochMs: Long,
-        val monotonicAtSyncMs: Long,
+        val monotonicAtSyncNanos: Long,
     )
 
     @Volatile
     private var state: SyncState? = null
 
     actual fun now(): Instant {
-        val s = state ?: return Clock.System.now()
-        // Advance trusted snapshot by elapsed monotonic time
-        val elapsedMs = currentMonotonicMs() - s.monotonicAtSyncMs
+        val s = state ?: return systemNow()
+        val elapsedMs = (monotonicNanos() - s.monotonicAtSyncNanos) / 1_000_000
         return Instant.fromEpochMilliseconds(s.trustedEpochMs + elapsedMs)
     }
 
     actual suspend fun sync() {
         try {
-            val serverMs = fetchServerDateMs() ?: return
-            state = SyncState(serverMs, currentMonotonicMs())
+            val serverMs = fetchServerTimeMs() ?: return
+            state = SyncState(serverMs, monotonicNanos())
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -56,9 +67,11 @@ actual class TrustedTimeClock actual constructor() {
     actual fun isTimeSynced(): Boolean = state != null
 
     actual fun timeSource(): TimeSource = if (state != null) TimeSource.TRUSTED else TimeSource.SYSTEM_FALLBACK
-
-    private fun currentMonotonicMs(): Long = (NSProcessInfo.processInfo.systemUptime * 1000).toLong()
 }
+
+/** Monotonic nanoseconds that, unlike systemUptime, include time the device spent asleep. */
+@OptIn(ExperimentalForeignApi::class)
+private fun continuousMonotonicNanos(): Long = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW.convert()).toLong()
 
 /**
  * HEAD request to time.cloudflare.com; returns its "Date" header (UTC) in epoch
