@@ -11,16 +11,31 @@ class IosTrustedTimeClockTest {
     private var fakeMonotonicNanos = 0L
     private var fakeSystemTime = Instant.fromEpochMilliseconds(0)
     private var fakeServer: suspend () -> Long? = { error("Server not set up for this test") }
+    private var fakeBootId: String? = "boot-1"
+    private val fakeStore =
+        object : SyncStore {
+            var saved: String? = null
+
+            override fun load() = saved
+
+            override fun save(value: String) {
+                saved = value
+            }
+        }
 
     private val dateHeaderMs = 1_700_000_000_000L
     private val syncedMs = dateHeaderMs + 500 // half a second for the header's rounding, no network delay
 
-    private val clock =
+    private fun newClock() =
         TrustedTimeClock(
             monotonicNanos = { fakeMonotonicNanos },
             systemNow = { fakeSystemTime },
             fetchServerTimeMs = { fakeServer() },
+            bootId = { fakeBootId },
+            store = fakeStore,
         )
+
+    private val clock = newClock()
 
     @Test
     fun nowAdvancesWithMonotonicTimeAfterSync() =
@@ -88,5 +103,61 @@ class IosTrustedTimeClockTest {
     @Test
     fun dateHeaderTimeAddsHalfASecondAndHalfTheRoundTrip() {
         assertEquals(1_650L, dateHeaderTimeAtReceiptMs(dateHeaderMs = 1_000, roundTripMs = 300))
+    }
+
+    @Test
+    fun syncSurvivesAnAppRestart() =
+        runBlocking {
+            fakeServer = { dateHeaderMs }
+            clock.sync()
+
+            fakeMonotonicNanos += 60_000_000_000L // the app is closed and reopened a minute later
+            val restarted = newClock()
+
+            assertTrue(restarted.isTimeSynced())
+            assertEquals(TimeSource.TRUSTED, restarted.timeSource())
+            assertEquals(syncedMs + 60_000, restarted.now().toEpochMilliseconds())
+        }
+
+    @Test
+    fun savedSyncIsIgnoredAfterAReboot() =
+        runBlocking {
+            fakeServer = { dateHeaderMs }
+            clock.sync()
+
+            fakeBootId = "boot-2"
+            val afterReboot = newClock()
+
+            assertFalse(afterReboot.isTimeSynced())
+            assertEquals(TimeSource.SYSTEM_FALLBACK, afterReboot.timeSource())
+        }
+
+    @Test
+    fun savedSyncIsIgnoredIfTheCounterWentBack() =
+        runBlocking {
+            fakeMonotonicNanos = 5_000_000_000L
+            fakeServer = { dateHeaderMs }
+            clock.sync()
+
+            fakeMonotonicNanos = 1_000_000_000L
+            assertFalse(newClock().isTimeSynced())
+        }
+
+    @Test
+    fun nothingIsSavedWithoutABootId() =
+        runBlocking {
+            fakeBootId = null
+            fakeServer = { dateHeaderMs }
+            clock.sync()
+
+            assertTrue(clock.isTimeSynced())
+            assertEquals(null, fakeStore.saved)
+        }
+
+    @Test
+    fun bootIdCanBeRead() {
+        val id = bootSessionId()
+        assertTrue(id != null && id.length == 36, "unexpected boot id: $id")
+        assertEquals(id, bootSessionId())
     }
 }

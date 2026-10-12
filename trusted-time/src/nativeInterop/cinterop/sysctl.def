@@ -1,0 +1,7 @@
+package = com.trustedtime.sysctl
+---
+#include <sys/sysctl.h>
+
+static inline int trustedtime_boot_session_uuid(char *buffer, size_t size) {
+    return sysctlbyname("kern.bootsessionuuid", buffer, &size, NULL, 0);
+}
