@@ -1,17 +1,17 @@
 [versions]
-kotlin = "2.0.21"
+kotlin = "2.4.21"
 androidGradlePlugin = "8.5.2"
 androidMinSdk = "21"
 androidCompileSdk = "34"
 androidTargetSdk = "34"
 kotlinxDatetime = "0.6.1"
-kotlinxCoroutines = "1.9.0"
+kotlinxCoroutines = "1.11.0"
 playServicesTime = "16.0.1"
-apacheCommonsNet = "3.11.1"
+apacheCommonsNet = "3.13.0"
 vanniktechPublish = "0.29.0"
 ktlintGradle = "14.2.0"
-appcompat = "1.7.0"
-lifecycle = "2.8.7"
+appcompat = "1.8.0"
+lifecycle = "2.11.0"
 
 [libraries]
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }

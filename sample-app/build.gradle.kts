@@ -14,10 +14,7 @@ android {
 
     defaultConfig {
         applicationId = "com.trustedtime.sample"
-        minSdk =
-            libs.versions.androidMinSdk
-                .get()
-                .toInt()
+        minSdk = 23 // appcompat 1.8 requires 23; the library itself supports 21
         targetSdk =
             libs.versions.androidTargetSdk
                 .get()
