@@ -1,13 +1,18 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
-    application
-}
-
-application {
-    mainClass.set("com.trustedtime.sample.jvm.MainKt")
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.compose.multiplatform)
 }
 
 dependencies {
     implementation(project(":trusted-time"))
-    implementation(libs.kotlinx.coroutines.core)
+    implementation(compose.desktop.currentOs)
+    implementation(libs.compose.material3)
+    implementation(libs.kotlinx.coroutines.swing)
+}
+
+compose.desktop {
+    application {
+        mainClass = "com.trustedtime.sample.jvm.MainKt"
+    }
 }

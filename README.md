@@ -159,9 +159,9 @@ date-time dependency.
 | `sample-jvm`  | `./gradlew :sample-jvm:run`            |
 | `sample-ios`  | `open sample-ios/SampleIos.xcodeproj`  |
 
-The JVM sample prints the trusted time next to the system time once a second for a minute. Moving
-the computer's clock back while it runs moves the system time but not the trusted time. Moving it
-forward switches the source to `SYSTEM_FALLBACK`.
+The JVM sample is a Compose for Desktop app that shows the trusted time next to the system time,
+updated live. Moving the computer's clock back while it runs moves the system time but not the
+trusted time. Moving it forward switches the source to `SYSTEM_FALLBACK` until the next sync.
 
 ## Building
 

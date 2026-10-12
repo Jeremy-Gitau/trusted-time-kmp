@@ -12,6 +12,8 @@ vanniktechPublish = "0.37.0"
 ktlintGradle = "14.2.0"
 appcompat = "1.8.0"
 lifecycle = "2.11.0"
+composeMultiplatform = "1.12.1"
+composeMaterial3 = "1.9.0"
 
 [libraries]
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
@@ -24,6 +26,8 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
 
 # JVM
+kotlinx-coroutines-swing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "kotlinxCoroutines" }
+compose-material3 = { group = "org.jetbrains.compose.material3", name = "material3", version.ref = "composeMaterial3" }
 apache-commons-net = { group = "commons-net", name = "commons-net", version.ref = "apacheCommonsNet" }
 
 [plugins]
@@ -33,3 +37,5 @@ android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
 vanniktech-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktechPublish" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintGradle" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
