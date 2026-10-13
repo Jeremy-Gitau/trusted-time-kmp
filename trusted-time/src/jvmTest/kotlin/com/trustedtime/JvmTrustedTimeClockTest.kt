@@ -119,7 +119,7 @@ class JvmTrustedTimeClockTest {
         runBlocking {
             fakeNtp = { 1_700_000_000_000L }
 
-            clock.sync()
+            assertTrue(clock.sync())
 
             assertTrue(clock.isTimeSynced())
             assertEquals(1_700_000_000_000L, clock.now().toEpochMilliseconds())
@@ -130,7 +130,7 @@ class JvmTrustedTimeClockTest {
         runBlocking {
             fakeNtp = { throw IOException("network down") }
 
-            clock.sync() // must not throw
+            assertFalse(clock.sync()) // must not throw
 
             assertFalse(clock.isTimeSynced())
             assertEquals(TimeSource.SYSTEM_FALLBACK, clock.timeSource())
@@ -143,7 +143,7 @@ class JvmTrustedTimeClockTest {
             clock.sync()
 
             fakeNtp = { throw IOException("network down") }
-            clock.sync()
+            assertFalse(clock.sync())
 
             assertTrue(clock.isTimeSynced())
             assertEquals(1_700_000_000_000L, clock.now().toEpochMilliseconds())

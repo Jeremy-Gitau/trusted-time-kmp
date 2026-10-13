@@ -44,19 +44,21 @@ actual class TrustedTimeClock internal constructor(
 
     actual override fun now(): Instant = trustedMillis()?.let(Instant::fromEpochMilliseconds) ?: systemNow()
 
-    actual suspend fun sync() {
+    actual suspend fun sync(): Boolean {
         try {
             client = createPlayServicesClient()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
         }
-        if (client?.computeCurrentUnixEpochMillis() != null) return
-        try {
+        if (client?.computeCurrentUnixEpochMillis() != null) return true
+        return try {
             httpsSync = HttpsSync(fetchHttpsTimeMs(), elapsedRealtimeNanos())
+            true
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            false
         }
     }
 

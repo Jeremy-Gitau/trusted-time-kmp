@@ -77,8 +77,8 @@ if (clock.timeSource() == TimeSource.TRUSTED) {
 
 Each `TrustedTimeClock` syncs on its own, so share a single instance across the app.
 
-`sync()` doesn't throw on network errors. If it fails, the clock keeps its previous sync, or uses
-the device clock if it has never synced. Cancelling the coroutine cancels the sync.
+`sync()` returns whether it succeeded, and doesn't throw on network errors. If it fails, the clock
+keeps its previous sync, or uses the device clock if it has never synced. Cancelling the coroutine cancels the sync.
 
 `now()` always returns a value. Before a successful sync it returns the device time, and
 `timeSource()` reports `SYSTEM_FALLBACK`. Check `timeSource()` before using the time for anything
@@ -121,7 +121,7 @@ let trusted = clock.timeSource() == .trusted
 ```kotlin
 class TrustedTimeClock() : Clock {
     override fun now(): Instant
-    suspend fun sync()
+    suspend fun sync(): Boolean
     fun isTimeSynced(): Boolean
     fun timeSource(): TimeSource
 }
@@ -129,12 +129,12 @@ class TrustedTimeClock() : Clock {
 enum class TimeSource { TRUSTED, SYSTEM_FALLBACK }
 ```
 
-| Member           | Description                                                        |
-|------------------|--------------------------------------------------------------------|
-| `now()`          | The trusted time, or the device time when not synced               |
-| `sync()`         | Fetches the trusted time; keeps the previous sync if it fails      |
-| `isTimeSynced()` | Whether a sync has ever succeeded                                  |
-| `timeSource()`   | The source `now()` would use right now                             |
+| Member           | Description                                                                       |
+|------------------|-----------------------------------------------------------------------------------|
+| `now()`          | The trusted time, or the device time when not synced                              |
+| `sync()`         | Fetches the trusted time; returns `false` and keeps the previous sync if it fails |
+| `isTimeSynced()` | Whether a sync has ever succeeded                                                 |
+| `timeSource()`   | The source `now()` would use right now                                            |
 
 `Clock` and `Instant` come from `kotlin.time` in the standard library, so the library adds no
 date-time dependency.
@@ -147,9 +147,11 @@ date-time dependency.
   The JVM's monotonic counter pauses while the computer sleeps on macOS and Linux. A sleep looks
   the same as the clock being moved forward, so either one makes `timeSource()` report
   `SYSTEM_FALLBACK` until the next `sync()`. Moving the clock back has no effect.
-- **HTTPS `Date` (iOS, and the fallback elsewhere):** the header has 1-second precision. With
-  network delay compensation, the time is within about half a second. That is enough to detect a
-  changed clock, but not for precise timing.
+- **iOS:** the HTTPS `Date` header only has whole seconds, so `sync()` makes about six requests
+  over one to two seconds to find the moment it changes second. The time is typically within
+  50 ms.
+- **HTTPS fallback on Android and the JVM:** a single request, within about half a second. That is
+  enough to detect a changed clock, but not for precise timing.
 
 ## Samples
 

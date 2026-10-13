@@ -75,12 +75,11 @@ private fun SampleScreen() {
         Button(onClick = {
             scope.launch {
                 status = "Syncing..."
-                clock.sync()
                 status =
-                    if (clock.isTimeSynced()) {
-                        "✅ Synced"
-                    } else {
-                        "⚠️ Sync failed — using system clock"
+                    when {
+                        clock.sync() -> "✅ Synced"
+                        clock.isTimeSynced() -> "⚠️ Sync failed — using last sync"
+                        else -> "⚠️ Sync failed — using system clock"
                     }
             }
         }) {

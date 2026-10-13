@@ -1,6 +1,7 @@
 package com.trustedtime
 
 import kotlinx.coroutines.runBlocking
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -10,7 +11,6 @@ import kotlin.time.Instant
 class IosTrustedTimeClockTest {
     private var fakeMonotonicNanos = 0L
     private var fakeSystemTime = Instant.fromEpochMilliseconds(0)
-    private var fakeServer: suspend () -> Long? = { error("Server not set up for this test") }
     private var fakeBootId: String? = "boot-1"
     private val fakeStore =
         object : SyncStore {
@@ -23,8 +23,18 @@ class IosTrustedTimeClockTest {
             }
         }
 
-    private val dateHeaderMs = 1_700_000_000_000L
-    private val syncedMs = dateHeaderMs + 500 // half a second for the header's rounding, no network delay
+    private val serverStartMs = 1_700_000_000_250L
+
+    private fun realTimeMs() = serverStartMs + fakeMonotonicNanos / 1_000_000
+
+    private var requestMs = 20L
+
+    private var fakeServer: suspend () -> Long? = {
+        fakeMonotonicNanos += requestMs * 500_000
+        val headerMs = realTimeMs() / 1_000 * 1_000
+        fakeMonotonicNanos += requestMs * 500_000
+        headerMs
+    }
 
     private fun newClock() =
         TrustedTimeClock(
@@ -33,33 +43,61 @@ class IosTrustedTimeClockTest {
             fetchServerTimeMs = { fakeServer() },
             bootId = { fakeBootId },
             store = fakeStore,
+            sleepNanos = { fakeMonotonicNanos += it },
         )
 
     private val clock = newClock()
 
+    private fun assertAboutRealTime(now: Instant) {
+        val errorMs = now.toEpochMilliseconds() - realTimeMs()
+        assertTrue(abs(errorMs) <= 40, "off by $errorMs ms")
+    }
+
+    @Test
+    fun syncFindsTheServerTime() =
+        runBlocking {
+            assertTrue(clock.sync())
+
+            assertTrue(clock.isTimeSynced())
+            assertAboutRealTime(clock.now())
+        }
+
     @Test
     fun nowAdvancesWithMonotonicTimeAfterSync() =
         runBlocking {
-            fakeServer = { dateHeaderMs }
             clock.sync()
 
             fakeMonotonicNanos += 3_600_000_000_000L // 1 hour passes, e.g. while the device sleeps
 
-            assertEquals(syncedMs + 3_600_000, clock.now().toEpochMilliseconds())
+            assertAboutRealTime(clock.now())
         }
 
     @Test
     fun changingSystemClockAfterSyncDoesNotAffectNow() =
         runBlocking {
-            fakeServer = { dateHeaderMs }
             clock.sync()
 
             // User moves the device clock forward by a year; only 1 real second passes
-            fakeSystemTime = Instant.fromEpochMilliseconds(dateHeaderMs + 365L * 24 * 60 * 60 * 1000)
+            fakeSystemTime = Instant.fromEpochMilliseconds(serverStartMs + 365L * 24 * 60 * 60 * 1000)
             fakeMonotonicNanos += 1_000_000_000L
 
-            assertEquals(syncedMs + 1_000, clock.now().toEpochMilliseconds())
+            assertAboutRealTime(clock.now())
             assertEquals(TimeSource.TRUSTED, clock.timeSource())
+        }
+
+    @Test
+    fun connectionSetupIsNotCountedAsRoundTrip() =
+        runBlocking {
+            var requests = 0
+            val warmServer = fakeServer
+            fakeServer = {
+                if (++requests == 1) fakeMonotonicNanos += 2_000_000_000L // the first request sets up the connection
+                warmServer()
+            }
+
+            clock.sync()
+
+            assertAboutRealTime(clock.now())
         }
 
     @Test
@@ -68,7 +106,7 @@ class IosTrustedTimeClockTest {
             fakeSystemTime = Instant.fromEpochMilliseconds(42)
             fakeServer = { null }
 
-            clock.sync()
+            assertFalse(clock.sync())
 
             assertFalse(clock.isTimeSynced())
             assertEquals(42, clock.now().toEpochMilliseconds())
@@ -77,54 +115,19 @@ class IosTrustedTimeClockTest {
     @Test
     fun failedResyncKeepsPreviousSync() =
         runBlocking {
-            fakeServer = { dateHeaderMs }
             clock.sync()
+            val synced = clock.now()
 
             fakeServer = { throw IllegalStateException("network down") }
-            clock.sync()
 
+            assertFalse(clock.sync())
             assertTrue(clock.isTimeSynced())
-            assertEquals(syncedMs, clock.now().toEpochMilliseconds())
+            assertEquals(synced, clock.now())
         }
-
-    @Test
-    fun syncAllowsForTheRoundTrip() =
-        runBlocking {
-            fakeServer = {
-                fakeMonotonicNanos += 200_000_000L // the request takes 200 ms
-                dateHeaderMs
-            }
-
-            clock.sync()
-
-            assertEquals(dateHeaderMs + 500 + 100, clock.now().toEpochMilliseconds())
-        }
-
-    @Test
-    fun connectionSetupIsNotCountedAsRoundTrip() =
-        runBlocking {
-            var requests = 0
-            fakeServer = {
-                requests++
-                fakeMonotonicNanos += if (requests == 1) 2_000_000_000L else 200_000_000L // cold, then warm
-                dateHeaderMs
-            }
-
-            clock.sync()
-
-            assertEquals(2, requests)
-            assertEquals(dateHeaderMs + 500 + 100, clock.now().toEpochMilliseconds())
-        }
-
-    @Test
-    fun dateHeaderTimeAddsHalfASecondAndHalfTheRoundTrip() {
-        assertEquals(1_650L, dateHeaderTimeAtReceiptMs(dateHeaderMs = 1_000, roundTripMs = 300))
-    }
 
     @Test
     fun syncSurvivesAnAppRestart() =
         runBlocking {
-            fakeServer = { dateHeaderMs }
             clock.sync()
 
             fakeMonotonicNanos += 60_000_000_000L // the app is closed and reopened a minute later
@@ -132,13 +135,12 @@ class IosTrustedTimeClockTest {
 
             assertTrue(restarted.isTimeSynced())
             assertEquals(TimeSource.TRUSTED, restarted.timeSource())
-            assertEquals(syncedMs + 60_000, restarted.now().toEpochMilliseconds())
+            assertEquals(clock.now(), restarted.now())
         }
 
     @Test
     fun savedSyncIsIgnoredAfterAReboot() =
         runBlocking {
-            fakeServer = { dateHeaderMs }
             clock.sync()
 
             fakeBootId = "boot-2"
@@ -152,7 +154,6 @@ class IosTrustedTimeClockTest {
     fun savedSyncIsIgnoredIfTheCounterWentBack() =
         runBlocking {
             fakeMonotonicNanos = 5_000_000_000L
-            fakeServer = { dateHeaderMs }
             clock.sync()
 
             fakeMonotonicNanos = 1_000_000_000L
@@ -163,7 +164,6 @@ class IosTrustedTimeClockTest {
     fun nothingIsSavedWithoutABootId() =
         runBlocking {
             fakeBootId = null
-            fakeServer = { dateHeaderMs }
             clock.sync()
 
             assertTrue(clock.isTimeSynced())

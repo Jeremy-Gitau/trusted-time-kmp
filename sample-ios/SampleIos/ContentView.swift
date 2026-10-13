@@ -16,8 +16,8 @@ struct ContentView: View {
             Button("Sync") {
                 Task {
                     status = "Syncing..."
-                    try? await clock.sync()
-                    status = clock.isTimeSynced() ? "✅ Synced" : "⚠️ Sync failed — using system clock"
+                    let synced = (try? await clock.sync())?.boolValue ?? false
+                    status = synced ? "✅ Synced" : clock.isTimeSynced() ? "⚠️ Sync failed — using last sync" : "⚠️ Sync failed — using system clock"
                 }
             }
             .buttonStyle(.borderedProminent)

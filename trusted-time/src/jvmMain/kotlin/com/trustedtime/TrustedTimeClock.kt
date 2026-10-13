@@ -43,14 +43,15 @@ actual class TrustedTimeClock internal constructor(
 
     actual override fun now(): Instant = trustedMillis()?.let(Instant::fromEpochMilliseconds) ?: systemNow()
 
-    actual suspend fun sync() {
+    actual suspend fun sync(): Boolean =
         try {
             applySync(fetchTimeMs())
+            true
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            false
         }
-    }
 
     internal fun applySync(ntpTimeMs: Long) {
         state = SyncState(ntpTimeMs, monotonicNanos(), systemNow().toEpochMilliseconds())

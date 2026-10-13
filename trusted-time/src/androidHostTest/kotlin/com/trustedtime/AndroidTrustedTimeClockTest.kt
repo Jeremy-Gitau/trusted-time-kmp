@@ -31,7 +31,7 @@ class AndroidTrustedTimeClockTest {
             fakePlayServices = { FakeClient(1_700_000_000_000L) }
             fakeHttps = { error("must not be called") }
 
-            clock.sync()
+            assertTrue(clock.sync())
 
             assertEquals(TimeSource.TRUSTED, clock.timeSource())
             assertEquals(1_700_000_000_000L, clock.now().toEpochMilliseconds())
@@ -42,7 +42,7 @@ class AndroidTrustedTimeClockTest {
         runBlocking {
             fakeHttps = { 1_700_000_000_000L }
 
-            clock.sync()
+            assertTrue(clock.sync())
             fakeElapsedNanos += 3_600_000_000_000L // an hour passes, including sleep
 
             assertTrue(clock.isTimeSynced())
@@ -56,7 +56,7 @@ class AndroidTrustedTimeClockTest {
             fakePlayServices = { FakeClient(null) }
             fakeHttps = { 1_700_000_000_000L }
 
-            clock.sync()
+            assertTrue(clock.sync())
 
             assertEquals(1_700_000_000_000L, clock.now().toEpochMilliseconds())
         }
@@ -66,7 +66,7 @@ class AndroidTrustedTimeClockTest {
         runBlocking {
             fakeSystemTime = Instant.fromEpochMilliseconds(42)
 
-            clock.sync()
+            assertFalse(clock.sync())
 
             assertFalse(clock.isTimeSynced())
             assertEquals(TimeSource.SYSTEM_FALLBACK, clock.timeSource())

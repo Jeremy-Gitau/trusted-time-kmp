@@ -32,8 +32,12 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnSync).setOnClickListener {
             lifecycleScope.launch {
                 statusText.text = "Syncing..."
-                clock.sync()
-                statusText.text = if (clock.isTimeSynced()) "✅ Synced" else "⚠️ Sync failed — using system clock"
+                statusText.text =
+                    when {
+                        clock.sync() -> "✅ Synced"
+                        clock.isTimeSynced() -> "⚠️ Sync failed — using last sync"
+                        else -> "⚠️ Sync failed — using system clock"
+                    }
             }
         }
 

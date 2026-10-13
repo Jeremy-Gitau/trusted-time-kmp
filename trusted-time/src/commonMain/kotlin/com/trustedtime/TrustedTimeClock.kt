@@ -12,7 +12,7 @@ enum class TimeSource {
 expect class TrustedTimeClock() : Clock {
     override fun now(): Instant
 
-    suspend fun sync()
+    suspend fun sync(): Boolean
 
     fun isTimeSynced(): Boolean
 

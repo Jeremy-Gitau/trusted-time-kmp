@@ -7,6 +7,7 @@ import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.convert
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.toKString
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSHTTPURLResponse
@@ -25,11 +26,12 @@ import kotlin.concurrent.Volatile
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.Instant
 
 /**
- * Reads the "Date" header of an HTTPS response from
- * www.apple.com as the trusted time.
+ * Reads the "Date" header of HTTPS responses from www.apple.com as the trusted time, timing the
+ * requests to find the moment it changes second (see [findServerTime]).
  *
  * After sync, time is advanced with CLOCK_MONOTONIC_RAW, a counter that is
  * unaffected by changes to the system clock and keeps running while the
@@ -44,6 +46,7 @@ actual class TrustedTimeClock internal constructor(
     private val fetchServerTimeMs: suspend () -> Long?,
     private val bootId: () -> String?,
     private val store: SyncStore,
+    private val sleepNanos: suspend (Long) -> Unit,
 ) : Clock {
     actual constructor() : this(
         ::continuousMonotonicNanos,
@@ -51,6 +54,7 @@ actual class TrustedTimeClock internal constructor(
         ::fetchServerDateMs,
         ::bootSessionId,
         UserDefaultsSyncStore,
+        { delay(it.nanoseconds) },
     )
 
     private class SyncState(
@@ -76,19 +80,18 @@ actual class TrustedTimeClock internal constructor(
         return Instant.fromEpochMilliseconds(s.trustedEpochMs + elapsedMs)
     }
 
-    actual suspend fun sync() {
+    actual suspend fun sync(): Boolean {
         try {
-            openConnection() ?: return
-            val startNanos = monotonicNanos()
-            val dateHeaderMs = fetchServerTimeMs() ?: return
-            val receivedNanos = monotonicNanos()
-            val roundTripMs = (receivedNanos - startNanos) / 1_000_000
-            val synced = SyncState(dateHeaderTimeAtReceiptMs(dateHeaderMs, roundTripMs), receivedNanos)
+            openConnection() ?: return false
+            val serverTime = findServerTime(monotonicNanos, fetchServerTimeMs, sleepNanos) ?: return false
+            val synced = SyncState(serverTime.epochMs, serverTime.monotonicNanos)
             state = synced
             bootId()?.let { store.save("$it|${synced.trustedEpochMs}|${synced.monotonicAtSyncNanos}") }
+            return true
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            return false
         }
     }
 
