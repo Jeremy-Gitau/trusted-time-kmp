@@ -179,11 +179,15 @@ date-time dependency.
 | `sample-app`  | `./gradlew :sample-app:installDebug`   |
 | `sample-jvm`  | `./gradlew :sample-jvm:run`            |
 | `sample-ios`  | `open sample-ios/SampleIos.xcodeproj`  |
+| `sample-web`  | `./gradlew :sample-web:wasmJsBrowserDevelopmentRun` |
 
 The JVM sample is a Compose for Desktop app that shows the trusted time next to the system time,
 updated live. Moving the computer's clock back while it runs moves the system time but not the
 trusted time. Moving it forward does the same on macOS and Linux; on Windows it switches the source
 to `SYSTEM_FALLBACK` until the next sync.
+
+The web sample is the same page in the browser. Its dev server forwards `/time` to `www.apple.com`,
+so the clock syncs against its own origin, the way a web app would sync against its own backend.
 
 ## Building
 
