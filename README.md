@@ -15,6 +15,7 @@ keeps working offline.
 | Android  | Google Play services TrustedTime API, or HTTPS `Date` without it | API 21  |
 | iOS      | HTTPS `Date` header from `www.apple.com`                         | iOS 15  |
 | JVM      | NTP (`pool.ntp.org`), or HTTPS `Date` where NTP is blocked       | Java 8  |
+| Web      | HTTPS `Date` header from the page's own origin (Kotlin/Wasm)     | —       |
 
 Where a platform's main source isn't available, the clock falls back to the `Date` header of an
 HTTPS response from `www.apple.com`.
@@ -117,6 +118,18 @@ let nowMs = clock.now().toEpochMilliseconds()
 let trusted = clock.timeSource() == .trusted
 ```
 
+### Web (Kotlin/Wasm)
+
+Browsers only let a page read the `Date` header of a response from its own origin, so
+`TrustedTimeClock()` syncs against the page's own origin. To sync against another server, pass its
+URL; that server must send `Access-Control-Expose-Headers: Date`:
+
+```kotlin
+val clock = TrustedTimeClock("https://api.example.com/health")
+```
+
+`performance.now()` restarts on every page load, so call `sync()` after each load.
+
 ## API
 
 ```kotlin
@@ -151,6 +164,9 @@ date-time dependency.
 - **iOS:** the HTTPS `Date` header only has whole seconds, so `sync()` makes about six requests
   over one to two seconds to find the moment it changes second. The time is typically within
   50 ms.
+- **Web:** the same second-boundary search as iOS, advanced with `performance.now()`. Where a
+  browser pauses that counter while the tab is hidden or the device sleeps, `timeSource()` reports
+  `SYSTEM_FALLBACK` until the next `sync()`.
 - **HTTPS fallback on Android and the JVM:** a single request, within about half a second. That is
   enough to detect a changed clock, but not for precise timing.
 
@@ -174,6 +190,8 @@ Requires JDK 17. iOS targets also require macOS with Xcode.
 ./gradlew :trusted-time:jvmTest                  # JVM tests
 ./gradlew :trusted-time:testAndroidHostTest      # Android tests
 ./gradlew :trusted-time:iosSimulatorArm64Test    # iOS simulator tests
+./gradlew :trusted-time:wasmJsNodeTest           # Web tests (Node)
+./gradlew :trusted-time:wasmJsBrowserTest        # Web tests (headless Chrome)
 ./ktlint.sh                                      # format and check code style
 ```
 

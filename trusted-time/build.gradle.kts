@@ -37,6 +37,12 @@ kotlin {
 
     jvm()
 
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    wasmJs {
+        browser()
+        nodejs()
+    }
+
     sourceSets {
         val jvmAndAndroidMain by creating { dependsOn(commonMain.get()) }
         jvmMain.get().dependsOn(jvmAndAndroidMain)
@@ -61,6 +67,10 @@ kotlin {
 
         jvmTest.dependencies {
             implementation(libs.kotlinx.datetime)
+        }
+
+        wasmJsTest.dependencies {
+            implementation(libs.kotlinx.coroutines.test)
         }
     }
 }
