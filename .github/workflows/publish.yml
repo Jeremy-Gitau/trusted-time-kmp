@@ -26,7 +26,7 @@ jobs:
             exit 1
           fi
       - name: Test
-        run: ./gradlew :trusted-time:jvmTest :trusted-time:testAndroidHostTest :trusted-time:iosSimulatorArm64Test
+        run: ./gradlew :trusted-time:jvmTest :trusted-time:testAndroidHostTest :trusted-time:iosSimulatorArm64Test :trusted-time:wasmJsNodeTest
       - name: Publish
         run: ./gradlew :trusted-time:publishAndReleaseToMavenCentral --no-configuration-cache
         env:

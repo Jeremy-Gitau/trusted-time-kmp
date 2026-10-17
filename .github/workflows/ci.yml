@@ -32,6 +32,22 @@ jobs:
           :sample-app:assembleDebug
           :sample-jvm:assemble
 
+  web:
+    name: Web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+      - name: Test on Node and headless Chrome, and build the web sample
+        run: >-
+          ./gradlew :trusted-time:wasmJsNodeTest
+          :trusted-time:wasmJsBrowserTest
+          :sample-web:wasmJsBrowserDistribution
+
   ios:
     name: iOS
     runs-on: macos-latest
