@@ -88,6 +88,141 @@ class JvmTrustedTimeClockTest {
             assertEquals(ntpTime + eightHours, clock.now().toEpochMilliseconds())
         }
 
+    private var fakeBootId = "boot-1"
+    private var fakeSinceBootMs = 60_000L
+    private var bootClockReads = 0
+    private var bootClockWorks = true
+    private val fakeStore =
+        object : SyncStore {
+            var value: String? = null
+
+            override fun load() = value
+
+            override fun save(value: String) {
+                this.value = value
+            }
+        }
+
+    private fun clockWithBootClock() =
+        TrustedTimeClock(
+            monotonicNanos = { fakeMonotonicNanos },
+            systemNow = { fakeSystemTime },
+            fetchTimeMs = { fakeNtp() },
+            bootClock = {
+                bootClockReads++
+                if (bootClockWorks) BootReading(fakeBootId, fakeSinceBootMs) else null
+            },
+            store = fakeStore,
+        )
+
+    private fun passRealTime(ms: Long) {
+        fakeMonotonicNanos += ms * 1_000_000
+        fakeSinceBootMs += ms
+        fakeSystemTime = Instant.fromEpochMilliseconds(fakeSystemTime.toEpochMilliseconds() + ms)
+    }
+
+    @Test
+    fun sleepKeepsTheTrustedTimeWhenTheTimeSinceBootIsKnown() {
+        val ntpTime = 1_700_000_000_000L
+        val clock = clockWithBootClock()
+        clock.applySync(ntpTime, BootReading(fakeBootId, fakeSinceBootMs))
+
+        val eightHours = 8L * 60 * 60 * 1000
+        fakeSinceBootMs += eightHours
+        fakeSystemTime = Instant.fromEpochMilliseconds(fakeSystemTime.toEpochMilliseconds() + eightHours)
+
+        assertEquals(TimeSource.TRUSTED, clock.timeSource())
+        assertEquals(ntpTime + eightHours, clock.now().toEpochMilliseconds())
+    }
+
+    @Test
+    fun movingTheClockForwardKeepsTheTrustedTimeWhenTheTimeSinceBootIsKnown() {
+        val ntpTime = 1_700_000_000_000L
+        val clock = clockWithBootClock()
+        clock.applySync(ntpTime, BootReading(fakeBootId, fakeSinceBootMs))
+
+        passRealTime(1_000)
+        fakeSystemTime = Instant.fromEpochMilliseconds(fakeSystemTime.toEpochMilliseconds() + 365L * 24 * 60 * 60 * 1000)
+
+        assertEquals(TimeSource.TRUSTED, clock.timeSource())
+        assertEquals(ntpTime + 1_000, clock.now().toEpochMilliseconds())
+    }
+
+    @Test
+    fun anAppRestartKeepsTheSync() =
+        runBlocking {
+            val ntpTime = 1_700_000_000_000L
+            fakeNtp = { ntpTime }
+            assertTrue(clockWithBootClock().sync())
+
+            passRealTime(30_000)
+            fakeSystemTime = Instant.fromEpochMilliseconds(0)
+            val restarted = clockWithBootClock()
+
+            assertTrue(restarted.isTimeSynced())
+            assertEquals(TimeSource.TRUSTED, restarted.timeSource())
+            assertEquals(ntpTime + 30_000, restarted.now().toEpochMilliseconds())
+        }
+
+    @Test
+    fun aRebootDropsTheSavedSync() =
+        runBlocking {
+            fakeNtp = { 1_700_000_000_000L }
+            clockWithBootClock().sync()
+
+            fakeBootId = "boot-2"
+            fakeSinceBootMs = 5_000
+            val restarted = clockWithBootClock()
+
+            assertFalse(restarted.isTimeSynced())
+            assertEquals(TimeSource.SYSTEM_FALLBACK, restarted.timeSource())
+        }
+
+    @Test
+    fun aSavedSyncFromLaterInTheBootIsIgnored() {
+        fakeStore.value = "$fakeBootId|1700000000000|${fakeSinceBootMs + 60_000}"
+
+        assertFalse(clockWithBootClock().isTimeSynced())
+    }
+
+    @Test
+    fun withoutTheTimeSinceBootNothingIsSavedAndASleepFallsBack() =
+        runBlocking {
+            bootClockWorks = false
+            fakeNtp = { 1_700_000_000_000L }
+            val clock = clockWithBootClock()
+            assertTrue(clock.sync())
+            assertEquals(null, fakeStore.value)
+
+            fakeSystemTime = Instant.fromEpochMilliseconds(fakeSystemTime.toEpochMilliseconds() + 600_000)
+
+            assertEquals(TimeSource.SYSTEM_FALLBACK, clock.timeSource())
+        }
+
+    @Test
+    fun aFailedBootClockReadIsNotRetriedOnEveryCall() {
+        val clock = clockWithBootClock()
+        clock.applySync(1_700_000_000_000L, BootReading(fakeBootId, fakeSinceBootMs))
+        bootClockWorks = false
+        bootClockReads = 0
+
+        fakeSystemTime = Instant.fromEpochMilliseconds(fakeSystemTime.toEpochMilliseconds() + 600_000)
+        repeat(5) { clock.now() }
+
+        assertEquals(1, bootClockReads)
+        assertEquals(TimeSource.SYSTEM_FALLBACK, clock.timeSource())
+    }
+
+    @Test
+    fun theTimeSinceBootCanBeReadOnMacAndLinux() {
+        val os = System.getProperty("os.name").lowercase()
+        if (!os.startsWith("mac") && !os.startsWith("linux")) return
+        val reading = readBootClock()
+
+        assertTrue(reading != null && reading.bootId.isNotEmpty() && reading.sinceBootMs > 0, "read $reading")
+        assertEquals(reading.bootId, readBootClock()?.bootId)
+    }
+
     @Test
     fun smallSystemClockCorrectionsAreAllowed() {
         val hourMs = 60L * 60 * 1000

@@ -18,3 +18,4 @@ dependencyResolutionManagement {
 include(":trusted-time")
 include(":sample-app")
 include(":sample-jvm")
+include(":sample-web")
