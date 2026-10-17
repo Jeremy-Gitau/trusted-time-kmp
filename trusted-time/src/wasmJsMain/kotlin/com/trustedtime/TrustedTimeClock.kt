@@ -86,7 +86,12 @@ private fun performanceNowNanos(): Long = (performanceNowMs() * 1_000_000).toLon
 @JsFun("() => performance.now()")
 private external fun performanceNowMs(): Double
 
-@JsFun("() => (globalThis.location && globalThis.location.origin && globalThis.location.origin !== 'null') ? globalThis.location.origin : null")
+@JsFun(
+    """() => {
+        const origin = globalThis.location && globalThis.location.origin;
+        return origin && origin !== 'null' ? origin : null;
+    }""",
+)
 private external fun pageOrigin(): String?
 
 @JsFun(

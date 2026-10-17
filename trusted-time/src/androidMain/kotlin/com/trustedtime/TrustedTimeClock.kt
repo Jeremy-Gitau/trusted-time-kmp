@@ -123,7 +123,11 @@ private fun currentBootId(): String? {
         if (count >= 0) return "count:$count"
     }
     return try {
-        File("/proc/sys/kernel/random/boot_id").readText().trim().takeIf { it.isNotEmpty() }?.let { "id:$it" }
+        File("/proc/sys/kernel/random/boot_id")
+            .readText()
+            .trim()
+            .takeIf { it.isNotEmpty() }
+            ?.let { "id:$it" }
     } catch (e: Exception) {
         null
     }
