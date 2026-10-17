@@ -43,7 +43,7 @@ fun main() {
 
 @Composable
 private fun SampleScreen() {
-    val clock = remember { if (isDevServer()) TrustedTimeClock("/time") else TrustedTimeClock() }
+    val clock = remember { TrustedTimeClock("/time") }
     val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf("Not synced") }
     var trusted by remember { mutableStateOf(clock.now()) }
@@ -85,10 +85,6 @@ private fun SampleScreen() {
         Text(describeOffset(trusted, system))
     }
 }
-
-@OptIn(ExperimentalWasmJsInterop::class)
-@JsFun("() => globalThis.location.hostname === 'localhost'")
-private external fun isDevServer(): Boolean
 
 private fun describeOffset(
     trusted: Instant,
