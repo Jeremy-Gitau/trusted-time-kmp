@@ -86,10 +86,10 @@ keeps its previous sync, or uses the device clock if it has never synced. Cancel
 security-sensitive, and call `sync()` again when it reports `SYSTEM_FALLBACK`, for example when the
 app returns to the foreground.
 
-On Android and iOS the sync is saved, so it survives an app restart until the device reboots: an
-app opened offline still gets the trusted time. On Android this needs `TrustedTimeInitializer.init`
-to run before the first `TrustedTimeClock` is created. On the JVM, call `sync()` each time the app
-starts.
+On Android, iOS, macOS and Linux the sync is saved, so it survives an app restart until the device
+reboots: an app opened offline still gets the trusted time. On Android this needs
+`TrustedTimeInitializer.init` to run before the first `TrustedTimeClock` is created. On Windows,
+call `sync()` each time the app starts.
 
 ### Use as a `kotlin.time.Clock`
 
@@ -158,9 +158,11 @@ date-time dependency.
 - **Android:** provided by Google Play services. Right after a reboot, Play services may have no
   trusted signal yet, so `sync()` uses the HTTPS fallback until it does.
 - **JVM:** NTP with network delay compensation, typically within a few milliseconds of the server.
-  The JVM's monotonic counter pauses while the computer sleeps on macOS and Linux. A sleep looks
-  the same as the clock being moved forward, so either one makes `timeSource()` report
-  `SYSTEM_FALLBACK` until the next `sync()`. Moving the clock back has no effect.
+  The JVM's monotonic counter pauses while the computer sleeps, so on macOS and Linux the clock
+  re-reads the time since boot (`kern.boottime`, `/proc/uptime`), which includes sleep and ignores
+  clock changes, and stays `TRUSTED`. On Windows a sleep looks the same as the clock being moved
+  forward, so either one makes `timeSource()` report `SYSTEM_FALLBACK` until the next `sync()`.
+  Moving the clock back has no effect.
 - **iOS:** the HTTPS `Date` header only has whole seconds, so `sync()` makes about six requests
   over one to two seconds to find the moment it changes second. The time is typically within
   50 ms.
@@ -180,7 +182,8 @@ date-time dependency.
 
 The JVM sample is a Compose for Desktop app that shows the trusted time next to the system time,
 updated live. Moving the computer's clock back while it runs moves the system time but not the
-trusted time. Moving it forward switches the source to `SYSTEM_FALLBACK` until the next sync.
+trusted time. Moving it forward does the same on macOS and Linux; on Windows it switches the source
+to `SYSTEM_FALLBACK` until the next sync.
 
 ## Building
 
