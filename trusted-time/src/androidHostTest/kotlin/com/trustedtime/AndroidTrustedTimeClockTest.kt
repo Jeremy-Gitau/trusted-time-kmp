@@ -16,14 +16,96 @@ class AndroidTrustedTimeClockTest {
     private var fakeSystemTime = Instant.fromEpochMilliseconds(0)
     private var fakePlayServices: suspend () -> TrustedTimeClient = { error("Play services not available") }
     private var fakeHttps: suspend () -> Long = { error("HTTPS not set up for this test") }
+    private var fakeBootId: String? = "count:1"
+    private val fakeStore =
+        object : SyncStore {
+            var saved: String? = null
 
-    private val clock =
+            override fun load() = saved
+
+            override fun save(value: String) {
+                saved = value
+            }
+        }
+
+    private fun newClock() =
         TrustedTimeClock(
             createPlayServicesClient = { fakePlayServices() },
             elapsedRealtimeNanos = { fakeElapsedNanos },
             systemNow = { fakeSystemTime },
             fetchHttpsTimeMs = { fakeHttps() },
+            bootId = { fakeBootId },
+            store = fakeStore,
         )
+
+    private val clock = newClock()
+
+    @Test
+    fun anAppRestartKeepsTheHttpsSync() =
+        runBlocking {
+            fakeElapsedNanos = 1_000_000_000L
+            fakeHttps = { 1_700_000_000_000L }
+            assertTrue(clock.sync())
+
+            fakeElapsedNanos += 600_000_000_000L
+            fakeSystemTime = Instant.fromEpochMilliseconds(1_700_000_000_000L - 4 * 3_600_000)
+            val restarted = newClock()
+
+            assertEquals(TimeSource.TRUSTED, restarted.timeSource())
+            assertEquals(1_700_000_000_000L + 600_000, restarted.now().toEpochMilliseconds())
+        }
+
+    @Test
+    fun anAppRestartKeepsAPlayServicesReading() =
+        runBlocking {
+            fakePlayServices = { FakeClient(1_700_000_000_000L) }
+            assertTrue(clock.sync())
+
+            fakeElapsedNanos += 60_000_000_000L
+            fakePlayServices = { FakeClient(null) }
+            val restarted = newClock()
+
+            assertEquals(1_700_000_000_000L + 60_000, restarted.now().toEpochMilliseconds())
+        }
+
+    @Test
+    fun aRebootDropsTheSavedSync() =
+        runBlocking {
+            fakeElapsedNanos = 5_000_000_000_000L
+            fakeHttps = { 1_700_000_000_000L }
+            assertTrue(clock.sync())
+
+            fakeBootId = "count:2"
+            fakeSystemTime = Instant.fromEpochMilliseconds(7)
+            val restarted = newClock()
+
+            assertEquals(TimeSource.SYSTEM_FALLBACK, restarted.timeSource())
+            assertEquals(7, restarted.now().toEpochMilliseconds())
+        }
+
+    @Test
+    fun aSavedSyncFromLaterInTheBootIsIgnored() =
+        runBlocking {
+            fakeElapsedNanos = 5_000_000_000_000L
+            fakeHttps = { 1_700_000_000_000L }
+            assertTrue(clock.sync())
+
+            fakeElapsedNanos = 1_000_000_000L
+            val restarted = newClock()
+
+            assertFalse(restarted.isTimeSynced())
+        }
+
+    @Test
+    fun withoutABootIdNothingIsSaved() =
+        runBlocking {
+            fakeBootId = null
+            fakeHttps = { 1_700_000_000_000L }
+            assertTrue(clock.sync())
+
+            assertEquals(null, fakeStore.saved)
+            assertFalse(newClock().isTimeSynced())
+        }
 
     @Test
     fun usesPlayServicesWhenItHasASignal() =

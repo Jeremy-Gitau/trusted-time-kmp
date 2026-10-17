@@ -26,7 +26,7 @@ HTTPS response from `www.apple.com`.
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.jeremy-gitau:trusted-time-kmp:0.2.0")
+            implementation("io.github.jeremy-gitau:trusted-time-kmp:0.3.0")
         }
     }
 }
@@ -37,7 +37,7 @@ Android-only and JVM-only projects can add the same dependency to their `depende
 
 ```kotlin
 dependencies {
-    implementation("io.github.jeremy-gitau:trusted-time-kmp:0.2.0")
+    implementation("io.github.jeremy-gitau:trusted-time-kmp:0.3.0")
 }
 ```
 
@@ -85,8 +85,9 @@ keeps its previous sync, or uses the device clock if it has never synced. Cancel
 security-sensitive, and call `sync()` again when it reports `SYSTEM_FALLBACK`, for example when the
 app returns to the foreground.
 
-On iOS the sync is saved, so it survives an app restart until the device reboots. On Android, Play
-services keeps its own trusted time across restarts. On the JVM, call `sync()` each time the app
+On Android and iOS the sync is saved, so it survives an app restart until the device reboots: an
+app opened offline still gets the trusted time. On Android this needs `TrustedTimeInitializer.init`
+to run before the first `TrustedTimeClock` is created. On the JVM, call `sync()` each time the app
 starts.
 
 ### Use as a `kotlin.time.Clock`

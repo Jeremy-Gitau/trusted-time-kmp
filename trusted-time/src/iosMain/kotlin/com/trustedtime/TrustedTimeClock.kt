@@ -102,12 +102,6 @@ actual class TrustedTimeClock internal constructor(
     actual fun timeSource(): TimeSource = if (state != null) TimeSource.TRUSTED else TimeSource.SYSTEM_FALLBACK
 }
 
-internal interface SyncStore {
-    fun load(): String?
-
-    fun save(value: String)
-}
-
 private object UserDefaultsSyncStore : SyncStore {
     private const val KEY = "com.trustedtime.lastSync"
 
